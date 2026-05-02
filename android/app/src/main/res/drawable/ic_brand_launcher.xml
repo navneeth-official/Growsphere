@@ -6,8 +6,8 @@
         </shape>
     </item>
     <item
-        android:drawable="@drawable/ic_leaf_white"
+        android:drawable="@drawable/ic_launcher_leaf_fg"
         android:gravity="center"
-        android:width="72dp"
-        android:height="72dp" />
+        android:width="64dp"
+        android:height="64dp" />
 </layer-list>

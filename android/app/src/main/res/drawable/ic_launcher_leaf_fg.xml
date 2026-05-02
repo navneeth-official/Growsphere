@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- White leaf mark: oval blade + stem (matches in-app eco motif). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,26c-14,0 -25,11 -25,25c0,11 7,20 17,23l0,4c0,3 2,5 5,5l6,0c3,0 5,-2 5,-5l0,-4c10,-3 17,-12 17,-23c0,-14 -11,-25 -25,-25z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M49,52h10v34h-10z" />
+</vector>

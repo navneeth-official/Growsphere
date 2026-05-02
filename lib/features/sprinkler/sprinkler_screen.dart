@@ -112,6 +112,13 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
 
     final plan = planAsync.valueOrNull ?? SprinklerAiPlan.fallback;
     final qc = _qualityColor(live.quality);
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final aiCardBg = isDark ? cs.surfaceContainerHighest : const Color(0xFFEFF6FF);
+    final aiTitleColor = isDark ? cs.onSurface : const Color(0xFF1E3A8A);
+    final aiBodyColor = isDark ? cs.onSurfaceVariant : const Color(0xFF1E40AF);
+    final aiAccentColor = isDark ? cs.primary : const Color(0xFF1D4ED8);
 
     return GrowLayout(
       innerTitle: l.sprinklerControlTitle,
@@ -166,7 +173,7 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                     Expanded(
                       child: Text(
                         'Fetching AI watering window for your crop…',
-                        style: GoogleFonts.inter(fontSize: 14, color: GrowColors.gray700),
+                        style: GoogleFonts.inter(fontSize: 14, color: cs.onSurface),
                       ),
                     ),
                   ],
@@ -175,7 +182,7 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
             ),
             error: (_, __) => const SizedBox.shrink(),
             data: (p) => Card(
-              color: const Color(0xFFEFF6FF),
+              color: aiCardBg,
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Column(
@@ -183,21 +190,24 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.auto_awesome, color: const Color(0xFF1D4ED8), size: 20),
+                        Icon(Icons.auto_awesome, color: aiAccentColor, size: 20),
                         const SizedBox(width: 8),
                         Text(
                           'AI watering window',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: const Color(0xFF1E3A8A)),
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: aiTitleColor),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Text(
                       '${p.idealSecondsMin}–${p.idealSecondsMax}s typical valve time · aim ~${p.targetMoisturePct}% moisture',
-                      style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E40AF)),
+                      style: GoogleFonts.inter(fontSize: 13, color: aiBodyColor),
                     ),
                     const SizedBox(height: 6),
-                    Text(p.rationale, style: GoogleFonts.inter(fontSize: 13, height: 1.4, color: const Color(0xFF1E3A8A))),
+                    Text(
+                      p.rationale,
+                      style: GoogleFonts.inter(fontSize: 13, height: 1.4, color: aiTitleColor),
+                    ),
                   ],
                 ),
               ),
@@ -232,12 +242,16 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                       const SizedBox(height: 4),
                       Text(
                         live.hintLine,
-                        style: GoogleFonts.inter(fontSize: 13, height: 1.35, color: GrowColors.gray700),
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          height: 1.35,
+                          color: cs.onSurface.withValues(alpha: 0.92),
+                        ),
                       ),
                       if (live.valveOpen)
                         Text(
                           '${live.secondsWatering}s on valve · target moisture ${plan.targetMoisturePct}%',
-                          style: GoogleFonts.inter(fontSize: 12, color: GrowColors.gray600),
+                          style: GoogleFonts.inter(fontSize: 12, color: cs.onSurfaceVariant),
                         ),
                     ],
                   ),
@@ -255,7 +269,7 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
             childAspectRatio: 1.05,
             children: [
               _SensorTile(
-                background: const Color(0xFFFFF8E7),
+                background: isDark ? cs.surfaceContainerHighest : const Color(0xFFFFF8E7),
                 icon: Icons.water_drop,
                 iconColor: const Color(0xFFE6A000),
                 label: l.soilMoisture,
@@ -264,6 +278,7 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                 chip: live.moisture < 35 ? 'Low' : live.moisture > 85 ? 'High' : l.statusMedium,
               ),
               _SensorTile(
+                background: isDark ? cs.surfaceContainerHighest : Colors.white,
                 icon: Icons.thermostat,
                 iconColor: const Color(0xFF2563EB),
                 label: l.temperature,
@@ -272,6 +287,7 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                 chip: l.normal,
               ),
               _SensorTile(
+                background: isDark ? cs.surfaceContainerHighest : Colors.white,
                 icon: Icons.speed,
                 iconColor: const Color(0xFF7C3AED),
                 label: l.humidity,
@@ -280,6 +296,7 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                 chip: l.good,
               ),
               _SensorTile(
+                background: isDark ? cs.surfaceContainerHighest : Colors.white,
                 icon: Icons.battery_charging_full,
                 iconColor: const Color(0xFFEA580C),
                 label: l.battery,
@@ -314,7 +331,7 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                             Text(l.sprinklerStatus, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                             Text(
                               live.valveOpen ? 'Watering in progress…' : l.readyToWater,
-                              style: GoogleFonts.inter(fontSize: 13, color: GrowColors.gray600),
+                              style: GoogleFonts.inter(fontSize: 13, color: cs.onSurfaceVariant),
                             ),
                           ],
                         ),
@@ -343,7 +360,7 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                     LinearProgressIndicator(
                       minHeight: 6,
                       borderRadius: BorderRadius.circular(99),
-                      backgroundColor: GrowColors.gray200,
+                      backgroundColor: cs.surfaceContainerHighest,
                       color: qc,
                       value: () {
                         final cap = (_durationMinutes * 60).round().clamp(1, 3600);
@@ -358,16 +375,16 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                       Text(l.duration, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                       Text(
                         _formatWaterMinutes(_durationMinutes),
-                        style: GoogleFonts.inter(color: GrowColors.gray600),
+                        style: GoogleFonts.inter(color: cs.onSurfaceVariant),
                       ),
                     ],
                   ),
                   SliderTheme(
                     data: SliderTheme.of(context).copyWith(
-                      activeTrackColor: Colors.black,
-                      inactiveTrackColor: GrowColors.gray200,
-                      thumbColor: Colors.white,
-                      overlayColor: Colors.black26,
+                      activeTrackColor: cs.primary,
+                      inactiveTrackColor: cs.outline.withValues(alpha: 0.35),
+                      thumbColor: cs.onPrimary,
+                      overlayColor: cs.primary.withValues(alpha: 0.18),
                       trackHeight: 4,
                       thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10, elevation: 0),
                       overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
@@ -410,7 +427,7 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                     title: Text(l.autoMode, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                     subtitle: Text(
                       l.autoModeSubtitle,
-                      style: GoogleFonts.inter(fontSize: 13, color: GrowColors.gray600),
+                      style: GoogleFonts.inter(fontSize: 13, color: cs.onSurfaceVariant),
                     ),
                     value: _autoMode,
                     onChanged: (v) => setState(() => _autoMode = v),
@@ -421,7 +438,7 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
+                        color: isDark ? cs.primaryContainer : const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -429,7 +446,11 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                         '• Daily watering at 7:00 AM and 5:00 PM\n'
                         '• Skip watering if rain is detected\n'
                         '• Adjust duration based on weather conditions',
-                        style: GoogleFonts.inter(fontSize: 13, height: 1.45, color: const Color(0xFF1D4ED8)),
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          height: 1.45,
+                          color: isDark ? cs.onPrimaryContainer : const Color(0xFF1D4ED8),
+                        ),
                       ),
                     ),
                   ],
@@ -437,7 +458,7 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: Material(
-                      color: const Color(0xFFE8F4FC),
+                      color: isDark ? cs.surfaceContainerHighest : const Color(0xFFE8F4FC),
                       borderRadius: BorderRadius.circular(12),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(12),
@@ -453,7 +474,7 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                               l.autoSettings,
                               style: GoogleFonts.inter(
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFF1D4ED8),
+                                color: isDark ? cs.primary : const Color(0xFF1D4ED8),
                               ),
                             ),
                           ),
@@ -474,21 +495,25 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                 children: [
                   Text(
                     "Today's Schedule",
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16),
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      color: cs.onSurface,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   _ScheduleTile(
                     title: 'Morning Watering',
                     subtitle: '7:00 AM - Completed',
                     done: true,
-                    bg: const Color(0xFFF0FDF4),
+                    bg: isDark ? cs.surfaceContainerHigh : const Color(0xFFF0FDF4),
                   ),
                   const SizedBox(height: 10),
                   _ScheduleTile(
                     title: 'Evening Watering',
                     subtitle: '5:00 PM - Scheduled',
                     done: false,
-                    bg: const Color(0xFFEFF6FF),
+                    bg: isDark ? cs.surfaceContainerHigh : const Color(0xFFEFF6FF),
                   ),
                 ],
               ),
@@ -515,11 +540,13 @@ class _ScheduleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outline.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [
@@ -527,9 +554,18 @@ class _ScheduleTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(subtitle, style: GoogleFonts.inter(fontSize: 13, color: GrowColors.gray600)),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(fontSize: 13, color: cs.onSurfaceVariant),
+                ),
               ],
             ),
           ),
@@ -572,8 +608,12 @@ class _SensorTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = background ?? (isDark ? cs.surfaceContainerHighest : Colors.white);
+
     return Card(
-      color: background ?? Colors.white,
+      color: cardColor,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -581,7 +621,10 @@ class _SensorTile extends StatelessWidget {
           children: [
             Icon(icon, color: iconColor, size: 28),
             const SizedBox(height: 6),
-            Text(label, style: GoogleFonts.inter(fontSize: 12, color: GrowColors.gray600)),
+            Text(
+              label,
+              style: GoogleFonts.inter(fontSize: 12, color: cs.onSurfaceVariant),
+            ),
             const SizedBox(height: 4),
             FittedBox(
               fit: BoxFit.scaleDown,
@@ -601,12 +644,15 @@ class _SensorTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: GrowColors.gray100,
+                color: isDark ? cs.surfaceContainerHigh : GrowColors.gray100,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 chip,
-                style: GoogleFonts.inter(fontSize: 11, color: GrowColors.gray700),
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: isDark ? cs.onSurface : GrowColors.gray700,
+                ),
               ),
             ),
           ],

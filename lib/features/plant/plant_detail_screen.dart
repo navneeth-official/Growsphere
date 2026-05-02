@@ -65,6 +65,8 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
           if (mounted) _syncMonthField(storage);
         });
 
+        final cs = Theme.of(context).colorScheme;
+
         return GrowLayout(
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
@@ -99,6 +101,7 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
               ),
               const SizedBox(height: 16),
               _infoCard(
+                colorScheme: cs,
                 icon: Icons.thermostat,
                 iconColor: const Color(0xFFEA580C),
                 title: l.climateRequirementsTitle,
@@ -106,6 +109,7 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
               ),
               const SizedBox(height: 12),
               _infoCard(
+                colorScheme: cs,
                 icon: Icons.water_drop_outlined,
                 iconColor: const Color(0xFF2563EB),
                 title: l.soilRequirementsTitle,
@@ -113,6 +117,7 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
               ),
               const SizedBox(height: 12),
               _infoCard(
+                colorScheme: cs,
                 icon: Icons.eco,
                 iconColor: GrowColors.green600,
                 title: l.fertilizerNeedsTitle,
@@ -123,7 +128,7 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
-                  side: const BorderSide(color: GrowColors.gray200),
+                  side: BorderSide(color: cs.outline.withValues(alpha: 0.35)),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -132,12 +137,16 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.calendar_today_outlined, size: 22),
+                          Icon(Icons.calendar_today_outlined, size: 22, color: cs.onSurface),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               l.whenPlanFarmTitle,
-                              style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16),
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                                color: cs.onSurface,
+                              ),
                             ),
                           ),
                         ],
@@ -156,8 +165,8 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
                         width: double.infinity,
                         child: FilledButton(
                           style: FilledButton.styleFrom(
-                            backgroundColor: GrowColors.gray400,
-                            foregroundColor: Colors.white,
+                            backgroundColor: cs.primary,
+                            foregroundColor: cs.onPrimary,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                           onPressed: () async {
@@ -203,16 +212,18 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
   }
 
   Widget _infoCard({
+    required ColorScheme colorScheme,
     required IconData icon,
     required Color iconColor,
     required String title,
     required String body,
   }) {
+    final cs = colorScheme;
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: GrowColors.gray200),
+        side: BorderSide(color: cs.outline.withValues(alpha: 0.35)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -225,11 +236,22 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16)),
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      color: cs.onSurface,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     body,
-                    style: GoogleFonts.inter(fontSize: 14, height: 1.4, color: GrowColors.gray700),
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      height: 1.45,
+                      color: cs.onSurface,
+                    ),
                   ),
                 ],
               ),

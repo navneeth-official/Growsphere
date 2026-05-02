@@ -113,6 +113,112 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
 
   void _onAddNewPlant() => context.go('/add-crop');
 
+  void _openCategorySheet(BuildContext context, String categoryId, List<Plant> allPlants, AppLocalizations l) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final list = categoryId == PlantCatalogCategory.all
+        ? List<Plant>.from(allPlants)
+        : allPlants.where((p) => PlantCatalogCategory.inferForPlantId(p.id) == categoryId).toList();
+    list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: cs.surface,
+      builder: (sheetCtx) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.58,
+          minChildSize: 0.32,
+          maxChildSize: 0.94,
+          builder: (_, scrollController) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          width: 60,
+                          height: 60,
+                          child: Image.network(
+                            PlantCatalogCategory.coverImageUrl(categoryId),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                ColoredBox(color: cs.primary.withValues(alpha: 0.35)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              PlantCatalogCategory.labelOf(categoryId),
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 18,
+                                color: cs.onSurface,
+                              ),
+                            ),
+                            Text(
+                              '${list.length} crops · tap for full info & farm setup',
+                              style: GoogleFonts.inter(fontSize: 13, color: cs.onSurfaceVariant, height: 1.3),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView.separated(
+                    controller: scrollController,
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 20),
+                    itemCount: list.length,
+                    separatorBuilder: (_, __) => Divider(height: 1, color: cs.outline.withValues(alpha: 0.25)),
+                    itemBuilder: (_, i) {
+                      final p = list[i];
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: SizedBox(
+                            width: 52,
+                            height: 52,
+                            child: _PlantThumb(imageUrl: p.imageUrl),
+                          ),
+                        ),
+                        title: Text(
+                          p.name,
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: cs.onSurface),
+                        ),
+                        subtitle: Text(
+                          '${p.difficulty} · ${p.harvestDurationDays} d harvest',
+                          style: GoogleFonts.inter(fontSize: 13, color: cs.onSurfaceVariant),
+                        ),
+                        trailing: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+                        onTap: () {
+                          Navigator.of(sheetCtx).pop();
+                          context.push('/plant/${p.id}');
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -245,6 +351,8 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                                     categoryId: id,
                                     plantCount: count,
                                     selected: i == _catPageIndex,
+                                    coverImageUrl: PlantCatalogCategory.coverImageUrl(id),
+                                    onTap: () => _openCategorySheet(context, id, plants, l),
                                   ),
                                 );
                               },
@@ -414,58 +522,100 @@ class _CategoryHeroCard extends StatelessWidget {
     required this.categoryId,
     required this.plantCount,
     required this.selected,
+    required this.coverImageUrl,
+    required this.onTap,
   });
 
   final String categoryId;
   final int plantCount;
   final bool selected;
+  final String coverImageUrl;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final g1 = cs.primary.withValues(alpha: selected ? 0.95 : 0.55);
-    final g2 = cs.surfaceContainerHighest;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [g1, g2],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: selected ? cs.primary : cs.outline.withValues(alpha: 0.4),
+              width: selected ? 2.5 : 1,
+            ),
           ),
-          border: Border.all(color: selected ? cs.primary : cs.outline.withValues(alpha: 0.35), width: selected ? 2 : 1),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        alignment: Alignment.bottomLeft,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text(
-              PlantCatalogCategory.labelOf(categoryId),
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                shadows: const [
-                  Shadow(offset: Offset(0, 1), blurRadius: 6, color: Color(0x66000000)),
-                ],
-              ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.network(
+                  coverImageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => ColoredBox(
+                    color: cs.primary.withValues(alpha: 0.45),
+                    child: Icon(Icons.eco, size: 48, color: cs.onPrimary.withValues(alpha: 0.9)),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.1),
+                        Colors.black.withValues(alpha: 0.72),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 14,
+                  right: 12,
+                  bottom: 12,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        PlantCatalogCategory.labelOf(categoryId),
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          shadows: const [
+                            Shadow(offset: Offset(0, 1), blurRadius: 8, color: Color(0x88000000)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$plantCount crops · tap to browse',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withValues(alpha: 0.95),
+                          shadows: const [
+                            Shadow(offset: Offset(0, 1), blurRadius: 6, color: Color(0x77000000)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (selected)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Icon(Icons.touch_app_rounded, color: Colors.white.withValues(alpha: 0.95), size: 22),
+                  ),
+              ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              '$plantCount crops · swipe or wait to explore',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withValues(alpha: 0.92),
-                shadows: const [
-                  Shadow(offset: Offset(0, 1), blurRadius: 4, color: Color(0x55000000)),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
