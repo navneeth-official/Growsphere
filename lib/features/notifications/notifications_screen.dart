@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../core/theme/grow_colors.dart';
 import '../../providers/providers.dart';
 import '../shell/grow_layout.dart';
 
@@ -18,6 +17,7 @@ class NotificationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(inAppNotificationsRevisionProvider);
     final items = ref.watch(growStorageProvider).loadInAppNotifications();
+    final cs = Theme.of(context).colorScheme;
 
     return PopScope(
       canPop: true,
@@ -43,7 +43,7 @@ class NotificationsScreen extends ConsumerWidget {
                   child: Text(
                     'No alerts yet. Task digests and sprinkler warnings will show up here.',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(color: GrowColors.gray600, height: 1.4),
+                    style: GoogleFonts.inter(color: cs.onSurfaceVariant, height: 1.4),
                   ),
                 ),
               )
@@ -57,19 +57,23 @@ class NotificationsScreen extends ConsumerWidget {
                   final title = m['title']?.toString() ?? '';
                   final body = m['body']?.toString() ?? '';
                   return Card(
-                    color: read ? GrowColors.gray50 : Colors.white,
+                    color: read ? cs.surfaceContainerHighest : cs.surface,
                     child: ListTile(
-                      title: Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                      title: Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: cs.onSurface)),
                       subtitle: Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
                           body,
-                          style: GoogleFonts.inter(fontSize: 14, height: 1.35, color: GrowColors.gray700),
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            height: 1.35,
+                            color: cs.onSurfaceVariant,
+                          ),
                         ),
                       ),
                       trailing: read
-                          ? Icon(Icons.done_all, color: GrowColors.gray400, size: 20)
-                          : Icon(Icons.circle, color: GrowColors.green600, size: 12),
+                          ? Icon(Icons.done_all, color: cs.onSurfaceVariant, size: 20)
+                          : Icon(Icons.circle, color: cs.primary, size: 12),
                       isThreeLine: true,
                       onTap: () {
                         if (!read) {

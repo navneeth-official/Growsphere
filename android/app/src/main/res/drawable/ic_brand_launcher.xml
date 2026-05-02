@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Brand launcher icon (matches native splash green #2E7D32). -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
@@ -7,11 +6,8 @@
         </shape>
     </item>
     <item
+        android:drawable="@drawable/ic_leaf_white"
         android:gravity="center"
-        android:width="36dp"
-        android:height="36dp">
-        <shape android:shape="oval">
-            <solid android:color="#FFFFFFFF" />
-        </shape>
-    </item>
+        android:width="72dp"
+        android:height="72dp" />
 </layer-list>

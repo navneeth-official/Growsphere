@@ -84,6 +84,12 @@ class AppTheme {
       seedColor: seed,
       brightness: Brightness.dark,
       surface: const Color(0xFF10291A),
+      surfaceContainerHighest: const Color(0xFF1A3326),
+      onSurfaceVariant: const Color(0xFFB8D4BF),
+    );
+    final textTheme = GoogleFonts.interTextTheme(ThemeData(brightness: Brightness.dark).textTheme).apply(
+      bodyColor: const Color(0xFFE8F5E9),
+      displayColor: const Color(0xFFE8F5E9),
     );
     return ThemeData(
       useMaterial3: true,
@@ -98,15 +104,53 @@ class AppTheme {
           color: scheme.onSurface,
         ),
       ),
-      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).apply(
-        bodyColor: const Color(0xFFE8F5E9),
-        displayColor: const Color(0xFFE8F5E9),
-      ),
-      cardTheme: const CardThemeData(
+      textTheme: textTheme,
+      cardTheme: CardThemeData(
         elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-        color: Color(0xFF163A24),
+        shape: RoundedRectangleBorder(
+          borderRadius: const BorderRadius.all(Radius.circular(12)),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+        ),
+        color: const Color(0xFF163A24),
+        shadowColor: Colors.black54,
       ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: scheme.primary,
+          foregroundColor: scheme.onPrimary,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: scheme.onSurface,
+          side: BorderSide(color: scheme.outline.withValues(alpha: 0.6)),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: scheme.surfaceContainerHighest,
+        hintStyle: TextStyle(color: scheme.onSurfaceVariant.withValues(alpha: 0.85)),
+        labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.5)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.45)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: scheme.primary, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      ),
+      dividerTheme: DividerThemeData(color: scheme.outline.withValues(alpha: 0.35)),
+      dialogTheme: DialogThemeData(backgroundColor: scheme.surfaceContainerHighest),
+      bottomSheetTheme: BottomSheetThemeData(backgroundColor: scheme.surfaceContainerHighest),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
           (s) => s.contains(WidgetState.selected) ? scheme.onPrimary : Colors.grey.shade400,

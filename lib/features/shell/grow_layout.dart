@@ -167,8 +167,10 @@ class _GreenHeader extends ConsumerWidget {
     final l = AppLocalizations.of(context)!;
     ref.watch(inAppNotificationsRevisionProvider);
     final unread = ref.watch(growStorageProvider).unreadNotificationCount();
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final headerBg = dark ? const Color(0xFF1B4D2E) : GrowColors.green600;
     return Material(
-      color: GrowColors.green600,
+      color: headerBg,
       elevation: 4,
       shadowColor: Colors.black26,
       borderRadius: const BorderRadius.only(
@@ -286,7 +288,7 @@ class _BottomNavItem extends StatelessWidget {
                 child: Icon(
                   icon,
                   size: 20,
-                  color: selected ? cs.onPrimary : cs.onSurface,
+                  color: selected ? cs.onPrimary : cs.onSurface.withValues(alpha: 0.92),
                 ),
               ),
             ),
@@ -296,7 +298,7 @@ class _BottomNavItem extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: selected ? cs.onPrimary : cs.onSurface.withValues(alpha: 0.85),
+                color: selected ? cs.primary : cs.onSurface.withValues(alpha: 0.92),
               ),
             ),
           ],

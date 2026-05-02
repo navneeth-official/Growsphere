@@ -24,7 +24,7 @@ class GrowToolShell extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.black87,
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 ),
                 onPressed: () {

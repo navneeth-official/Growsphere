@@ -13,13 +13,18 @@ class ToolsHubScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     return GrowLayout(
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
         children: [
           Text(
             l.toolsScreenTitle,
-            style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700),
+            style: GoogleFonts.inter(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: cs.onSurface,
+            ),
           ),
           const SizedBox(height: 20),
           _ToolCard(
@@ -28,6 +33,7 @@ class ToolsHubScreen extends StatelessWidget {
             title: l.aiChatAssistantTitle,
             subtitle: l.aiChatAssistantDesc,
             onOpen: () => context.push('/chat'),
+            subtitleColor: cs.onSurfaceVariant,
           ),
           const SizedBox(height: 12),
           _ToolCard(
@@ -36,6 +42,7 @@ class ToolsHubScreen extends StatelessWidget {
             title: l.plantPhotoDetectionTitle,
             subtitle: l.plantPhotoDetectionDesc,
             onOpen: () => context.push('/disease'),
+            subtitleColor: cs.onSurfaceVariant,
           ),
           const SizedBox(height: 12),
           _ToolCard(
@@ -44,6 +51,7 @@ class ToolsHubScreen extends StatelessWidget {
             title: l.soilAnalysisTitle,
             subtitle: l.soilAnalysisDesc,
             onOpen: () => context.push('/soil'),
+            subtitleColor: cs.onSurfaceVariant,
           ),
           const SizedBox(height: 12),
           _ToolCard(
@@ -52,6 +60,7 @@ class ToolsHubScreen extends StatelessWidget {
             title: l.pestControlGuideTitle,
             subtitle: l.pestControlGuideDesc,
             onOpen: () => context.push('/pest'),
+            subtitleColor: cs.onSurfaceVariant,
           ),
         ],
       ),
@@ -66,6 +75,7 @@ class _ToolCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onOpen,
+    required this.subtitleColor,
   });
 
   final Color circleColor;
@@ -73,6 +83,7 @@ class _ToolCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onOpen;
+  final Color subtitleColor;
 
   @override
   Widget build(BuildContext context) {
@@ -97,14 +108,12 @@ class _ToolCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     subtitle,
-                    style: GoogleFonts.inter(fontSize: 14, color: GrowColors.gray600),
+                    style: GoogleFonts.inter(fontSize: 14, color: subtitleColor, height: 1.35),
                   ),
                   const SizedBox(height: 12),
                   FilledButton(
                     onPressed: onOpen,
                     style: FilledButton.styleFrom(
-                      backgroundColor: Colors.black87,
-                      foregroundColor: Colors.white,
                       minimumSize: const Size(120, 40),
                     ),
                     child: Text(l.openTool),

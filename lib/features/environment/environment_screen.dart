@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/farm_plan_bootstrap.dart';
-import '../../core/theme/grow_colors.dart';
 import '../../domain/grow_enums.dart';
 import '../../providers/providers.dart';
 import '../shell/grow_tools_sheet.dart';
@@ -72,7 +71,9 @@ class _EnvironmentScreenState extends ConsumerState<EnvironmentScreen> {
             const SizedBox(height: 8),
             Text(
               l.farmStartMonthHint,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: GrowColors.gray600),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<int>(
@@ -114,6 +115,7 @@ class _EnvironmentScreenState extends ConsumerState<EnvironmentScreen> {
                         final now = DateTime.now();
                         final start = DateTime(now.year, now.month, now.day);
                         final plan = FarmPlanBootstrap.anchorToGrowStart(rawPlan, start);
+                        final usedAi = repo != null && !plan.summary.contains('Template plan');
                         await ref.read(sessionControllerProvider.notifier).startGrow(
                               plant: plant,
                               location: _loc,
@@ -121,6 +123,17 @@ class _EnvironmentScreenState extends ConsumerState<EnvironmentScreen> {
                               farmPlanStartMonth1To12: _farmStartMonth,
                               farmPlan: plan,
                             );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                usedAi
+                                    ? 'AI calendar created for ${plant.name}.'
+                                    : 'Using built-in template calendar (add Gemini API key for crop-specific AI plans).',
+                              ),
+                            ),
+                          );
+                        }
                         if (context.mounted) context.go('/home');
                       } finally {
                         if (mounted) setState(() => _busy = false);
