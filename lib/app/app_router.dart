@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/add_crop/add_crop_screen.dart';
 import '../features/disease/disease_screen.dart';
 import '../features/ai_chat/ai_chat_screen.dart';
 import '../features/garden/my_garden_screen.dart';
