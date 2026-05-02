@@ -43,13 +43,14 @@ class FarmPlanTemplates {
         ActivityStage.harvesting => 'Finish & harvest',
       };
 
-  /// [anchor] defaults to `2000-01-01` so the same [materializeTaskAnchors] pipeline as Gemini works.
+  /// When [anchor] is null, uses `2000-01-01` so the same [FarmPlanAiResult.materializeTaskAnchors] pipeline as Gemini works.
   static FarmPlanAiResult buildFallback({
-    DateTime anchor = const DateTime(2000, 1, 1),
+    DateTime? anchor,
     required int harvestDays,
     String plantName = 'crop',
   }) {
-    final tasks = GrowSession.generateTasks(start: anchor, harvestDays: harvestDays);
+    final effectiveAnchor = anchor ?? DateTime(2000, 1, 1);
+    final tasks = GrowSession.generateTasks(start: effectiveAnchor, harvestDays: harvestDays);
     return FarmPlanAiResult(
       summary:
           'Template plan for $plantName — week-based soil block, then establishment, feeding, and harvest. '
