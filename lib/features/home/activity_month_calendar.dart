@@ -9,8 +9,8 @@ import '../../domain/grow_session.dart';
 
 DateTime _dOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
-Color _fillForGrowDay(int dayIndex, int totalDays) {
-  final stage = GrowSession.stageForDayIndex(dayIndex, totalDays);
+Color _fillForGrowDay(GrowSession session, int dayIndex) {
+  final stage = session.activityStageForGrowDay(dayIndex);
   final dim = (dayIndex ~/ 7).isOdd ? 0.72 : 0.92;
   return switch (stage) {
     ActivityStage.soilPrep =>
@@ -194,7 +194,7 @@ class _ActivityMonthCalendarState extends State<ActivityMonthCalendar> {
                 ),
               );
             }
-            final fill = _fillForGrowDay(off, _n);
+            final fill = _fillForGrowDay(widget.session, off);
             final tick = GrowSession.allDueTasksCompleteForDay(widget.session, day);
             return Tooltip(
               message: '${day.month}/${day.day} · grow day ${off + 1} of $_n',
@@ -230,7 +230,7 @@ class _ActivityMonthCalendarState extends State<ActivityMonthCalendar> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Colours: week 1 = soil prep, then 2-week blocks (establish → feed → finish). '
+          'Colours follow your farm plan stages (AI or template). '
           'A tick appears when every task due that day is completed.',
           style: GoogleFonts.inter(fontSize: 11, color: GrowColors.gray600, height: 1.35),
         ),

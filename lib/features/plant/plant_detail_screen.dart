@@ -172,7 +172,12 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
                             ref.read(localDataRevisionProvider.notifier).state++;
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Activity calendar updated')),
+                                SnackBar(
+                                  content: Text(
+                                    '${l.whenPlanFarmTitle} — saved. Open ${l.environmentTitle.toLowerCase()} next; '
+                                    'your AI activity calendar is created when you continue there.',
+                                  ),
+                                ),
                               );
                             }
                           },

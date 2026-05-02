@@ -10,6 +10,7 @@ import '../data/composite_plant_repository.dart';
 import '../data/gemini_ai_chat_repository.dart';
 import '../data/gemini_crop_research_repository.dart';
 import '../data/gemini_disease_analysis_repository.dart';
+import '../data/gemini_farm_plan_repository.dart';
 import '../data/gemini_market_price_repository.dart';
 import '../data/grow_storage.dart';
 import '../data/market_price_repository.dart';
@@ -55,6 +56,12 @@ final geminiCropResearchRepositoryProvider = Provider<GeminiCropResearchReposito
   final g = ref.watch(geminiCropResearchServiceProvider);
   if (g == null) return null;
   return GeminiCropResearchRepository(gemini: g);
+});
+
+final geminiFarmPlanRepositoryProvider = Provider<GeminiFarmPlanRepository?>((ref) {
+  final g = ref.watch(geminiGenerativeServiceProvider);
+  if (g == null) return null;
+  return GeminiFarmPlanRepository(gemini: g);
 });
 
 final plantRagContextServiceProvider = Provider<PlantRagContextService>((ref) {

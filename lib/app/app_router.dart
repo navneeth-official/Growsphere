@@ -17,6 +17,7 @@ import '../features/settings/settings_screen.dart';
 import '../features/soil/soil_recovery_screen.dart';
 import '../features/notifications/notifications_screen.dart';
 import '../features/sprinkler/sprinkler_screen.dart';
+import '../features/streaks/streak_hub_screen.dart';
 import '../features/streaks/streaks_screen.dart';
 import '../features/tools/tools_hub_screen.dart';
 import '../features/weather/weather_screen.dart';
@@ -77,6 +78,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
       GoRoute(path: '/weather', builder: (_, __) => const WeatherScreen()),
       GoRoute(path: '/streaks', builder: (_, __) => const StreaksScreen()),
+      GoRoute(path: '/streak-hub', builder: (_, __) => const StreakHubScreen()),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
     ],
   );

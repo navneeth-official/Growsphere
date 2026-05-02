@@ -8,7 +8,8 @@
     <application
         android:label="Growsphere"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@drawable/ic_brand_launcher"
+        android:roundIcon="@drawable/ic_brand_launcher">
         <activity
             android:name=".MainActivity"
             android:exported="true"

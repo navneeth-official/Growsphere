@@ -23,6 +23,8 @@ const _kInAppNotifications = 'in_app_notifications_json';
 const _kSprinklerFromCalendar = 'sprinkler_pending_from_calendar';
 const _kFieldTelemetrySnap = 'field_telemetry_snap_json';
 const _kFieldTelemetryBaseline = 'field_telemetry_baseline_json';
+const _kWateringDurMin = 'watering_duration_minutes';
+const _kGrowArchives = 'grow_session_archives_json';
 
 /// Local key-value store. Swap for Firestore sync layer later.
 class GrowStorage {
@@ -239,6 +241,42 @@ class GrowStorage {
     final s = getFieldTelemetrySnapshot();
     if (s == null) return;
     await box.put(_kFieldTelemetryBaseline, jsonEncode(s));
+  }
+
+  /// Manual watering slider (minutes, 0.5 step). Default 15.
+  double get wateringDurationMinutes {
+    final v = box.get(_kWateringDurMin);
+    if (v is num) return v.toDouble().clamp(0.5, 30.0);
+    return 15.0;
+  }
+
+  Future<void> setWateringDurationMinutes(double minutes) async {
+    final snapped = ((minutes / 0.5).round() * 0.5).clamp(0.5, 30.0);
+    await box.put(_kWateringDurMin, snapped);
+  }
+
+  List<Map<String, dynamic>> loadGrowArchives() {
+    final raw = box.get(_kGrowArchives) as String?;
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> appendGrowArchive(Map<String, dynamic> sessionJson) async {
+    final list = loadGrowArchives()
+      ..insert(0, {...sessionJson, 'archivedAt': DateTime.now().toIso8601String()});
+    while (list.length > 30) {
+      list.removeLast();
+    }
+    await box.put(_kGrowArchives, jsonEncode(list));
+  }
+
+  Future<void> clearInAppNotifications() async {
+    await box.delete(_kInAppNotifications);
   }
 
   Future<void> wipeAll() async {

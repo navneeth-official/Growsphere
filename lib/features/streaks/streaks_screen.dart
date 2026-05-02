@@ -2,19 +2,34 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:growspehere_v1/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../domain/grow_session.dart';
 import '../../providers/providers.dart';
 import '../shell/grow_tools_sheet.dart';
 
-const _badgeMeta = <String, (String title, String desc)>{
+const _staticBadgeMeta = <String, (String title, String desc)>{
   'badge_first_water': ('First drink', 'Logged your first watering'),
-  'badge_streak_chain_3': ('On a roll', '3 perfect task days in a row'),
-  'badge_streak_7': ('Week warrior', '7 perfect task days in a row'),
-  'badge_streak_chain_14': ('Fortnight focus', '14 perfect task days in a row'),
-  'badge_streak_30': ('Monthly master', '30 perfect task days in a row'),
   'badge_thriving': ('Thriving', 'Plant health 90% or more'),
   'badge_task_master': ('Task master', 'Completed 20 care tasks'),
 };
+
+List<MapEntry<String, (String title, String desc)>> _badgeEntriesForSession(GrowSession s) {
+  final out = <MapEntry<String, (String, String)>>[];
+  for (final m in s.streakMilestoneDays) {
+    out.add(
+      MapEntry(
+        'badge_streak_day_$m',
+        (
+          '$m-day streak',
+          'Reach $m consecutive perfect task days for this crop.',
+        ),
+      ),
+    );
+  }
+  out.addAll(_staticBadgeMeta.entries);
+  return out;
+}
 
 class StreaksScreen extends ConsumerWidget {
   const StreaksScreen({super.key});
@@ -25,6 +40,13 @@ class StreaksScreen extends ConsumerWidget {
     final session = ref.watch(sessionControllerProvider);
     return GrowSubpageScaffold(
       title: l.streaksBadges,
+      appBarActions: [
+        IconButton(
+          tooltip: 'History & milestones',
+          icon: const Icon(Icons.insights_outlined),
+          onPressed: () => context.push('/streak-hub'),
+        ),
+      ],
       body: session == null
           ? const Center(child: Text('Start a grow to see streaks'))
           : ListView(
@@ -50,7 +72,7 @@ class StreaksScreen extends ConsumerWidget {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: _badgeMeta.entries.map<Widget>((e) {
+                  children: _badgeEntriesForSession(session).map<Widget>((e) {
                     final earned = session.earnedBadgeIds.contains(e.key);
                     final m = e.value;
                     return Tooltip(

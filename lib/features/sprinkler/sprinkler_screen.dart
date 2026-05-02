@@ -22,11 +22,18 @@ class SprinklerScreen extends ConsumerStatefulWidget {
 
 class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
   bool _autoMode = true;
-  double _durationMinutes = 15;
+  late double _durationMinutes;
+
+  String _formatWaterMinutes(double m) {
+    final x = (m * 2).round() / 2;
+    if ((x - x.round()).abs() < 0.001) return '${x.round()} min';
+    return '${x.toStringAsFixed(1)} min';
+  }
 
   @override
   void initState() {
     super.initState();
+    _durationMinutes = ref.read(growStorageProvider).wateringDurationMinutes;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       if (widget.autoWater) {
@@ -350,7 +357,7 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                     children: [
                       Text(l.duration, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                       Text(
-                        '${_durationMinutes.round()} minutes',
+                        _formatWaterMinutes(_durationMinutes),
                         style: GoogleFonts.inter(color: GrowColors.gray600),
                       ),
                     ],
@@ -366,11 +373,17 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                       overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
                     ),
                     child: Slider(
-                      value: _durationMinutes,
-                      min: 5,
-                      max: 45,
-                      divisions: 8,
-                      onChanged: live.valveOpen ? null : (v) => setState(() => _durationMinutes = v),
+                      value: _durationMinutes.clamp(0.5, 30.0),
+                      min: 0.5,
+                      max: 30,
+                      divisions: 59,
+                      onChanged: live.valveOpen
+                          ? null
+                          : (v) async {
+                              final snapped = ((v * 2).round() / 2).clamp(0.5, 30.0);
+                              setState(() => _durationMinutes = snapped);
+                              await ref.read(growStorageProvider).setWateringDurationMinutes(snapped);
+                            },
                     ),
                   ),
                 ],

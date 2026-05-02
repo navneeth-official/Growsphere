@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/services/care_timing_service.dart';
 import '../data/grow_storage.dart';
+import '../domain/farm_plan_ai_result.dart';
 import '../domain/grow_enums.dart';
 import '../domain/grow_session.dart';
 import '../domain/grow_task.dart';
@@ -35,7 +36,13 @@ class SessionController extends Notifier<GrowSession?> {
     required Plant plant,
     required GrowLocationType location,
     required SunlightLevel sunlight,
+    required int farmPlanStartMonth1To12,
+    required FarmPlanAiResult farmPlan,
   }) async {
+    final prev = state;
+    if (prev != null) {
+      await _storage.appendGrowArchive(prev.toJson());
+    }
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day);
     final rec = GrowSession.recommendationFor(
@@ -56,7 +63,7 @@ class SessionController extends Notifier<GrowSession?> {
       location: location,
       sunlight: sunlight,
       startedAt: start,
-      tasks: GrowSession.generateTasks(start: start, harvestDays: plant.harvestDurationDays),
+      tasks: farmPlan.tasks,
       waterLog: [],
       streak: 0,
       bestStreak: 0,
@@ -66,6 +73,8 @@ class SessionController extends Notifier<GrowSession?> {
       streakByDay: {},
       earnedBadgeIds: [],
       wateringRecommendationText: rec,
+      farmPlanStartMonth: farmPlanStartMonth1To12.clamp(1, 12),
+      farmPlanJson: farmPlan.serialize(),
     );
     await _persist();
   }
@@ -164,10 +173,9 @@ class SessionController extends Notifier<GrowSession?> {
     }
 
     if (s.waterLog.isNotEmpty) add('badge_first_water');
-    if (s.streak >= 3) add('badge_streak_chain_3');
-    if (s.streak >= 7) add('badge_streak_7');
-    if (s.streak >= 14) add('badge_streak_chain_14');
-    if (s.streak >= 30) add('badge_streak_30');
+    for (final m in s.streakMilestoneDays) {
+      if (s.streak >= m) add('badge_streak_day_$m');
+    }
     if (s.plantHealth >= 90) add('badge_thriving');
     final done = s.tasks.where((t) => t.completed).length;
     if (done >= 20) add('badge_task_master');
@@ -231,6 +239,10 @@ class SessionController extends Notifier<GrowSession?> {
   }
 
   Future<void> clearSession() async {
+    final prev = state;
+    if (prev != null) {
+      await _storage.appendGrowArchive(prev.toJson());
+    }
     state = null;
     await _storage.saveSession(null);
     _router.refresh();

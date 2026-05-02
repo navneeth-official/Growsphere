@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:growspehere_v1/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/grow_colors.dart';
@@ -24,19 +25,18 @@ class FarmStreakCard extends StatelessWidget {
 
   final GrowSession session;
 
-  static const _streakBadgeIds = {
-    'badge_streak_chain_3',
-    'badge_streak_7',
-    'badge_streak_chain_14',
-    'badge_streak_30',
-  };
+  static bool _isStreakMilestoneBadge(String id) =>
+      id.startsWith('badge_streak_day_') && int.tryParse(id.replaceFirst('badge_streak_day_', '')) != null;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final muted = cs.onSurfaceVariant;
     final recent = session.perfectStreakDayLog.reversed.take(7).toList();
-    final streakBadges = session.earnedBadgeIds.where(_streakBadgeIds.contains).toList();
+    final streakBadges = session.earnedBadgeIds.where(_isStreakMilestoneBadge).toList()..sort();
+    final milestoneLine = session.streakMilestoneDays.isEmpty
+        ? 'Milestones appear after your farm plan loads.'
+        : 'Streak badges unlock at: ${session.streakMilestoneDays.join(', ')} perfect day(s).';
 
     return Card(
       child: Padding(
@@ -66,8 +66,7 @@ class FarmStreakCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'A perfect day means every task due that calendar day is completed. '
-              'Badges unlock at 3, 7, 14, and 30 consecutive perfect days.',
+              'A perfect day means every task due that calendar day is completed. $milestoneLine',
               style: GoogleFonts.inter(fontSize: 12, color: muted, height: 1.35),
             ),
             if (streakBadges.isNotEmpty) ...[
@@ -108,6 +107,15 @@ class FarmStreakCard extends StatelessWidget {
                         backgroundColor: GrowColors.green100.withValues(alpha: 0.6),
                       );
                     }).toList(),
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => context.push('/streak-hub'),
+                icon: const Icon(Icons.insights_outlined, size: 18),
+                label: Text('History & milestones', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              ),
             ),
           ],
         ),
