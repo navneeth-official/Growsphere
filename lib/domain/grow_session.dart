@@ -82,6 +82,7 @@ class GrowSession {
       };
 
   factory GrowSession.fromJson(Map<String, dynamic> json) {
+    return GrowSession(
       plantId: json['plantId'] as String,
       plantName: json['plantName'] as String,
       difficulty: json['difficulty'] as String,
