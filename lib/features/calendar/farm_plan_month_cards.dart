@@ -10,14 +10,57 @@ class FarmPlanMonthCards extends StatelessWidget {
     super.key,
     required this.startMonth1To12,
     required this.sectionTitle,
+    this.onTemplateRowTap,
   });
 
   final int startMonth1To12;
   final String sectionTitle;
 
+  /// Index matches [flattenFarmPlanTemplate] order (all rows across month cards).
+  final ValueChanged<int>? onTemplateRowTap;
+
   @override
   Widget build(BuildContext context) {
     final blocks = buildFarmPlanMonths(startMonth1To12);
+    var flatIndex = 0;
+    final cards = <Widget>[];
+    for (final b in blocks) {
+      final blockStart = flatIndex;
+      cards.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: const BorderSide(color: GrowColors.gray200),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    b.header,
+                    style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 12),
+                  for (var i = 0; i < b.tasks.length; i++) ...[
+                    if (i > 0) Divider(height: 20, color: GrowColors.gray200.withValues(alpha: 0.8)),
+                    _TaskRow(
+                      task: b.tasks[i],
+                      flatIndex: blockStart + i,
+                      onRowTap: onTemplateRowTap,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      flatIndex += b.tasks.length;
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -26,46 +69,26 @@ class FarmPlanMonthCards extends StatelessWidget {
           style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
-        ...blocks.map((b) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: const BorderSide(color: GrowColors.gray200),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        b.header,
-                        style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 12),
-                      for (var i = 0; i < b.tasks.length; i++) ...[
-                        if (i > 0) Divider(height: 20, color: GrowColors.gray200.withValues(alpha: 0.8)),
-                        _TaskRow(task: b.tasks[i]),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            )),
+        ...cards,
       ],
     );
   }
 }
 
 class _TaskRow extends StatelessWidget {
-  const _TaskRow({required this.task});
+  const _TaskRow({
+    required this.task,
+    required this.flatIndex,
+    this.onRowTap,
+  });
 
   final FarmPlanTask task;
+  final int flatIndex;
+  final ValueChanged<int>? onRowTap;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final row = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
@@ -107,6 +130,18 @@ class _TaskRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+    if (onRowTap == null) return row;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => onRowTap!(flatIndex),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: row,
+        ),
+      ),
     );
   }
 }

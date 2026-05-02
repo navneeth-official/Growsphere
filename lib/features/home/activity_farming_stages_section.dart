@@ -1,10 +1,12 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:growspehere_v1/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/farm_plan_template.dart';
 import '../../core/theme/grow_colors.dart';
-import '../../domain/activity_stage.dart';
 import '../../domain/grow_session.dart';
 import '../../domain/grow_task.dart';
 import '../../providers/providers.dart';
@@ -12,99 +14,124 @@ import 'grow_task_checkbox_tile.dart';
 
 DateTime _dOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
-ActivityStage _stageForToday(GrowSession s) {
+int _growDayIndex(GrowSession s, DateTime due) {
+  final start = _dOnly(s.startedAt);
+  final d = _dOnly(due);
+  return d.difference(start).inDays.clamp(0, max(0, s.harvestDurationDays - 1));
+}
+
+List<GrowTask> _tasksForFarmPlanRow(GrowSession s, FarmPlanTask row) {
+  final w = parseWeekNumberFromLabel(row.weekLabel);
+  if (w == null) return [];
+  final start = (w - 1) * 7;
+  final end = min(start + 6, s.harvestDurationDays - 1);
+  if (start > s.harvestDurationDays - 1) return [];
+  final list = s.tasks.where((t) {
+    final di = _growDayIndex(s, t.dueDate);
+    return di >= start && di <= end;
+  }).toList()
+    ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
+  return list;
+}
+
+(int done, int total) _countsForSlot(GrowSession s, FarmPlanTask row) {
+  final list = _tasksForFarmPlanRow(s, row);
+  var d = 0;
+  for (final t in list) {
+    if (t.completed) d++;
+  }
+  return (d, list.length);
+}
+
+int _defaultSlotIndex(List<FarmPlanTask> flat, GrowSession s) {
+  if (flat.isEmpty) return 0;
   final t = DateTime.now();
   final start = _dOnly(s.startedAt);
-  final diff = _dOnly(t).difference(start).inDays;
-  if (diff < 0) return ActivityStage.soilPrep;
-  final idx = diff.clamp(0, s.harvestDurationDays - 1);
-  return s.activityStageForGrowDay(idx);
-}
-
-IconData _iconForStage(ActivityStage st) {
-  return switch (st) {
-    ActivityStage.soilPrep => Icons.landscape_outlined,
-    ActivityStage.seeding => Icons.spa_outlined,
-    ActivityStage.fertilizing => Icons.science_outlined,
-    ActivityStage.harvesting => Icons.agriculture_outlined,
-  };
-}
-
-String _shortLabel(ActivityStage st) {
-  return switch (st) {
-    ActivityStage.soilPrep => 'Soil prep',
-    ActivityStage.seeding => 'Seeding',
-    ActivityStage.fertilizing => 'Feeding',
-    ActivityStage.harvesting => 'Harvest',
-  };
-}
-
-String _stageDescription(GrowSession s, ActivityStage stage) {
-  final plan = s.farmPlanOrNull;
-  if (plan != null && plan.stages.isNotEmpty) {
-    final ranges = plan.stages.where((r) => r.stage == stage).toList();
-    if (ranges.isNotEmpty) {
-      final r = ranges.first;
-      return '${r.name} (days ${r.startDay + 1}–${r.endDay + 1}): follow the checklist below to stay on track for this block.';
+  final dayIdx = _dOnly(t).difference(start).inDays.clamp(0, max(0, s.harvestDurationDays - 1));
+  final currentWeek = dayIdx ~/ 7 + 1;
+  var best = 0;
+  var bestDist = 9999;
+  for (var i = 0; i < flat.length; i++) {
+    final w = parseWeekNumberFromLabel(flat[i].weekLabel);
+    if (w == null) continue;
+    final dist = (w - currentWeek).abs();
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = i;
     }
   }
-  return switch (stage) {
-    ActivityStage.soilPrep =>
-      'Bed prep, compost, drainage, and pH checks set the foundation before you sow or transplant.',
-    ActivityStage.seeding =>
-      'Keep seedbeds evenly moist, protect from pests, and thin or transplant as seedlings establish.',
-    ActivityStage.fertilizing =>
-      'Side-dress, foliar feeds, and steady watering move the crop through vigorous growth.',
-    ActivityStage.harvesting =>
-      'Harvest on time, watch quality, and ease watering slightly as the crop finishes.',
-  };
+  return best.clamp(0, flat.length - 1);
 }
 
-(int done, int total) _countsForStage(GrowSession s, ActivityStage stage) {
-  var t = 0;
-  var d = 0;
-  for (final x in s.tasks) {
-    if (x.stage != stage) continue;
-    t++;
-    if (x.completed) d++;
-  }
-  return (d, t);
-}
-
-/// Horizontal stage strip, stage blurb, and tasks for the selected stage.
+/// One icon per farm-plan template row (same count/order as [FarmPlanMonthCards]).
 class ActivityFarmingStagesSection extends ConsumerStatefulWidget {
-  const ActivityFarmingStagesSection({super.key, required this.session});
+  const ActivityFarmingStagesSection({
+    super.key,
+    required this.session,
+    required this.startMonth1To12,
+    this.selectedSlotIndex,
+    this.onSlotChanged,
+    this.sectionAnchorKey,
+  });
 
   final GrowSession session;
+  final int startMonth1To12;
+
+  /// When non-null, highlights this template slot (0-based flat index).
+  final int? selectedSlotIndex;
+
+  final ValueChanged<int>? onSlotChanged;
+
+  /// Optional key on the root column for [Scrollable.ensureVisible].
+  final GlobalKey? sectionAnchorKey;
 
   @override
   ConsumerState<ActivityFarmingStagesSection> createState() => _ActivityFarmingStagesSectionState();
 }
 
 class _ActivityFarmingStagesSectionState extends ConsumerState<ActivityFarmingStagesSection> {
-  ActivityStage? _picked;
+  int? _localSlot;
 
   @override
   void didUpdateWidget(covariant ActivityFarmingStagesSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.session.gardenInstanceId != widget.session.gardenInstanceId) {
-      _picked = null;
+    if (oldWidget.session.gardenInstanceId != widget.session.gardenInstanceId ||
+        oldWidget.startMonth1To12 != widget.startMonth1To12) {
+      _localSlot = null;
     }
+  }
+
+  int _effectiveSlot(List<FarmPlanTask> flat, GrowSession session) {
+    if (flat.isEmpty) return 0;
+    if (widget.selectedSlotIndex != null) {
+      return widget.selectedSlotIndex!.clamp(0, flat.length - 1);
+    }
+    if (_localSlot != null) return _localSlot!.clamp(0, flat.length - 1);
+    return _defaultSlotIndex(flat, session);
+  }
+
+  void _setSlot(int i, List<FarmPlanTask> flat) {
+    final clamped = i.clamp(0, max(0, flat.length - 1));
+    setState(() => _localSlot = clamped);
+    widget.onSlotChanged?.call(clamped);
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final session = ref.watch(sessionControllerProvider) ?? widget.session;
-    final auto = _stageForToday(session);
-    final stage = _picked ?? auto;
+    final flat = flattenFarmPlanTemplate(widget.startMonth1To12);
+    if (flat.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final slot = _effectiveSlot(flat, session);
+    final row = flat[slot];
     final cs = Theme.of(context).colorScheme;
-    final stages = ActivityStage.values;
-    final (done, total) = _countsForStage(session, stage);
-    final stageTasks = session.tasks.where((t) => t.stage == stage).toList()
-      ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
+    final (done, total) = _countsForSlot(session, row);
+    final slotTasks = _tasksForFarmPlanRow(session, row);
 
     return Column(
+      key: widget.sectionAnchorKey,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
@@ -121,7 +148,7 @@ class _ActivityFarmingStagesSectionState extends ConsumerState<ActivityFarmingSt
         ),
         const SizedBox(height: 4),
         Text(
-          '${session.plantName} · ${session.harvestDurationDays}-day grow · tap a stage icon',
+          '${session.plantName} · ${session.harvestDurationDays}-day grow · ${flat.length} weekly stages',
           style: GoogleFonts.inter(fontSize: 13, color: GrowColors.gray600),
         ),
         const SizedBox(height: 14),
@@ -129,53 +156,53 @@ class _ActivityFarmingStagesSectionState extends ConsumerState<ActivityFarmingSt
           height: 118,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: stages.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemCount: flat.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
             itemBuilder: (_, i) {
-              final st = stages[i];
-              final sel = st == stage;
-              final (d, t) = _countsForStage(session, st);
+              final t = flat[i];
+              final sel = i == slot;
+              final (d, tot) = _countsForSlot(session, t);
               return InkWell(
                 borderRadius: BorderRadius.circular(16),
-                onTap: () => setState(() => _picked = st),
+                onTap: () => _setSlot(i, flat),
                 child: SizedBox(
-                  width: 86,
+                  width: 82,
                   child: Column(
                     children: [
                       Stack(
                         clipBehavior: Clip.none,
                         children: [
                           Container(
-                            width: 72,
-                            height: 72,
+                            width: 68,
+                            height: 68,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: sel ? cs.primary : cs.surfaceContainerHighest,
+                              color: sel ? cs.primary : t.iconBg,
                               border: Border.all(
-                                color: sel ? cs.primary : cs.outline.withValues(alpha: 0.4),
+                                color: sel ? cs.primary : cs.outline.withValues(alpha: 0.35),
                                 width: sel ? 2.5 : 1,
                               ),
                             ),
                             child: Icon(
-                              _iconForStage(st),
-                              size: 32,
-                              color: sel ? cs.onPrimary : cs.onSurface,
+                              t.icon,
+                              size: 28,
+                              color: sel ? cs.onPrimary : t.iconColor,
                             ),
                           ),
                           Positioned(
                             right: -2,
                             bottom: -2,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                               decoration: BoxDecoration(
                                 color: Colors.orange.shade700,
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(color: Colors.white, width: 1),
                               ),
                               child: Text(
-                                t == 0 ? '0/0' : '$d/$t',
+                                tot == 0 ? '0/0' : '$d/$tot',
                                 style: GoogleFonts.inter(
-                                  fontSize: 10,
+                                  fontSize: 9,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                 ),
@@ -186,14 +213,14 @@ class _ActivityFarmingStagesSectionState extends ConsumerState<ActivityFarmingSt
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        _shortLabel(st),
+                        t.weekLabel,
                         textAlign: TextAlign.center,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: sel ? FontWeight.w800 : FontWeight.w600,
-                          color: sel ? cs.primary : cs.onSurface.withValues(alpha: 0.85),
+                          color: sel ? cs.primary : cs.onSurface.withValues(alpha: 0.88),
                         ),
                       ),
                     ],
@@ -211,17 +238,22 @@ class _ActivityFarmingStagesSectionState extends ConsumerState<ActivityFarmingSt
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _shortLabel(stage),
+                  row.title,
                   style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 15),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  row.weekLabel,
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: cs.primary),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _stageDescription(session, stage),
+                  row.subtitle,
                   style: GoogleFonts.inter(fontSize: 14, height: 1.45, color: cs.onSurface),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '$done of $total tasks done in this stage',
+                  '$done of $total scheduled tasks in this window',
                   style: GoogleFonts.inter(fontSize: 12, color: GrowColors.gray600),
                 ),
               ],
@@ -233,19 +265,21 @@ class _ActivityFarmingStagesSectionState extends ConsumerState<ActivityFarmingSt
           children: [
             Icon(Icons.task_alt_outlined, size: 20, color: cs.onSurface),
             const SizedBox(width: 8),
-            Text(
-              'Tasks: ${_shortLabel(stage)}',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15),
+            Expanded(
+              child: Text(
+                'Tasks: ${row.title}',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        if (stageTasks.isEmpty)
+        if (slotTasks.isEmpty)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                'No tasks tagged for this stage.',
+                'No calendar tasks fall in ${row.weekLabel} yet.',
                 style: GoogleFonts.inter(color: GrowColors.gray600),
               ),
             ),
@@ -254,9 +288,9 @@ class _ActivityFarmingStagesSectionState extends ConsumerState<ActivityFarmingSt
           Card(
             child: Column(
               children: [
-                for (var i = 0; i < stageTasks.length; i++) ...[
+                for (var i = 0; i < slotTasks.length; i++) ...[
                   if (i > 0) Divider(height: 1, color: cs.outline.withValues(alpha: 0.2)),
-                  GrowTaskCheckboxTile(key: ValueKey(stageTasks[i].id), taskId: stageTasks[i].id),
+                  GrowTaskCheckboxTile(key: ValueKey(slotTasks[i].id), taskId: slotTasks[i].id),
                 ],
               ],
             ),

@@ -21,6 +21,18 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final ScrollController _scroll = ScrollController();
+  final GlobalKey _stagesSectionKey = GlobalKey();
+
+  /// Negative: let [ActivityFarmingStagesSection] pick default from grow dates.
+  int _selectedFarmPlanSlot = -1;
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -118,6 +130,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final startM = storage.farmPlanStartMonthForPlant(session.plantId) ?? session.startedAt.month;
     return GrowLayout(
       body: ListView(
+        controller: _scroll,
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
         children: [
           Text(
@@ -128,6 +141,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           FarmPlanMonthCards(
             startMonth1To12: startM,
             sectionTitle: l.farmPlanningSectionTitle,
+            onTemplateRowTap: (flatIndex) {
+              setState(() => _selectedFarmPlanSlot = flatIndex);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final ctx = _stagesSectionKey.currentContext;
+                if (ctx != null && mounted) {
+                  Scrollable.ensureVisible(
+                    ctx,
+                    alignment: 0.12,
+                    duration: const Duration(milliseconds: 420),
+                    curve: Curves.easeInOutCubic,
+                  );
+                }
+              });
+            },
           ),
           const SizedBox(height: 20),
           Row(
@@ -152,15 +179,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             label: Text(l.iWatered),
           ),
           const SizedBox(height: 24),
-          ActivityFarmingStagesSection(session: session),
+          ActivityFarmingStagesSection(
+            session: session,
+            startMonth1To12: startM,
+            selectedSlotIndex: _selectedFarmPlanSlot < 0 ? null : _selectedFarmPlanSlot,
+            onSlotChanged: (i) => setState(() => _selectedFarmPlanSlot = i),
+            sectionAnchorKey: _stagesSectionKey,
+          ),
           const SizedBox(height: 24),
           FarmStreakCard(session: session),
           const SizedBox(height: 16),
           Text(l.activityCalendar, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           ActivityMonthCalendar(session: session),
-          const SizedBox(height: 24),
-          TaskScopeSection(session: session),
         ],
       ),
     );

@@ -51,6 +51,18 @@ class FarmPlanMonthBlock {
   final List<FarmPlanTask> tasks;
 }
 
+/// All template rows in display order (month blocks → tasks).
+List<FarmPlanTask> flattenFarmPlanTemplate(int startMonth1To12) {
+  return buildFarmPlanMonths(startMonth1To12).expand((b) => b.tasks).toList();
+}
+
+/// Parses labels like "Week 12" → 12.
+int? parseWeekNumberFromLabel(String weekLabel) {
+  final m = RegExp(r'Week\s+(\d+)', caseSensitive: false).firstMatch(weekLabel);
+  if (m == null) return null;
+  return int.tryParse(m.group(1)!);
+}
+
 int _monthAt(int start1To12, int offset) {
   var m = start1To12 + offset - 1;
   m %= 12;
