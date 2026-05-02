@@ -1,0 +1,9 @@
+Reference GROWSPHERE.apk (Capacitor + Next.js v0) vs Flutter app — resolved in code:
+
+1. Shell: ref uses full-width green header + max-w-md (~448px) white column + bottom nav (Plants, Calendar, Tools, Add Plant, Research). Flutter had AppBar per screen + drawer → replaced with GrowLayout + tools grid sheet.
+2. Theme: ref Tailwind green-600 / gray-50 / white cards / Geist-like sans → GrowColors + Inter in app_theme (light).
+3. Plant list: ref cards with 80px image, Default badge, Growth period N months, Learn More → plant_pick_screen + optional imageUrl in plants.json.
+4. Header actions: ref edit / grid / droplets / settings → mapped to settings, tools sheet, sprinkler, settings.
+5. Welcome: ref is plant-first; Flutter keeps welcome but styles to same palette/chrome.
+
+No android/ or l10n.yaml edits.
