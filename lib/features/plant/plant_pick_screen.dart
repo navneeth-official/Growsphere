@@ -394,7 +394,6 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                   ),
                 ),
               ],
-            ),
           );
         },
         loading: () => const Padding(
@@ -466,9 +465,10 @@ class _CategoryHeroCard extends StatelessWidget {
                 ],
               ),
             ),
-              ],
-            ),
-          );
+          ],
+        ),
+      ),
+    );
   }
 }
 

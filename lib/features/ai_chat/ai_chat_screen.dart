@@ -53,7 +53,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       setState(() => _msgs.add((false, reply)));
     } catch (e) {
       if (!mounted) return;
-      setState(() => _msgs.add((false, 'Sorry, something went wrong: $e'));
+      setState(() => _msgs.add((false, 'Sorry, something went wrong: $e')));
     }
     await Future<void>.delayed(Duration.zero);
     if (_scroll.hasClients) {
