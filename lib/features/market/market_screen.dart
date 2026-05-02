@@ -344,11 +344,11 @@ class _MiniTrendCard extends StatelessWidget {
                   gridData: const FlGridData(show: false),
                   borderData: FlBorderData(show: false),
                   titlesData: FlTitlesData(
-                    topTitles: const AxisTitles(sideTitles: SideTitles(show: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(show: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
-                        show: true,
+                        showTitles: true,
                         reservedSize: 36,
                         getTitlesWidget: (v, m) => Text(
                           v.round().toString(),
@@ -358,7 +358,7 @@ class _MiniTrendCard extends StatelessWidget {
                     ),
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
-                        show: true,
+                        showTitles: true,
                         interval: 1,
                         getTitlesWidget: (v, m) {
                           final i = v.round();
