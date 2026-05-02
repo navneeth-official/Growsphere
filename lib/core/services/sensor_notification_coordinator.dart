@@ -1,4 +1,4 @@
-import '../data/grow_storage.dart';
+import '../../data/grow_storage.dart';
 import 'notification_service.dart';
 
 /// Human-readable labels for simulated field-node channels.
