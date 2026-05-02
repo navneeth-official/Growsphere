@@ -1,9 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:growspehere_v1/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/farm_plan_bootstrap.dart';
+import '../../core/network/image_request_headers.dart';
+import '../../core/theme/grow_colors.dart';
 import '../../domain/grow_enums.dart';
 import '../../domain/grow_session.dart';
 import '../../domain/plant.dart';
@@ -15,7 +20,9 @@ final _setupPlantProvider = FutureProvider.family<Plant?, String>((ref, id) asyn
   return ref.read(plantRepositoryProvider).byId(id);
 });
 
-/// Month → location → sunlight → watering line → add to garden (single screen).
+int _growthMonthsFromHarvestDays(int days) => (days / 30).round().clamp(1, 36);
+
+/// Crop encyclopedia + month / location / sunlight / watering → add to garden.
 class PlantGardenSetupScreen extends ConsumerStatefulWidget {
   const PlantGardenSetupScreen({super.key, required this.plantId});
 
@@ -32,6 +39,15 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
   bool _busy = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final m = ref.read(growStorageProvider).farmPlanStartMonthForPlant(widget.plantId);
+      if (m != null && mounted) setState(() => _farmStartMonth = m);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final loc = MaterialLocalizations.of(context);
@@ -44,19 +60,88 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
             body: const Center(child: Text('Plant not found')),
           );
         }
+        final cs = Theme.of(context).colorScheme;
         final rec = GrowSession.recommendationFor(
           wateringLevel: plant.wateringLevel,
           location: _loc,
           sun: _sun,
         );
+        final growthMonths = _growthMonthsFromHarvestDays(plant.harvestDurationDays);
         return GrowSubpageScaffold(
           title: l.gardenSetupTitle,
           body: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              Text(plant.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 20),
-              Text(l.farmMonthLabel, style: Theme.of(context).textTheme.titleMedium),
+              if (plant.imageUrl != null && plant.imageUrl!.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: plant.imageUrl!.startsWith('http')
+                        ? Image.network(
+                            plant.imageUrl!,
+                            fit: BoxFit.cover,
+                            headers: ImageRequestHeaders.standard,
+                            errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image)),
+                          )
+                        : Image.file(
+                            File(plant.imageUrl!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image)),
+                          ),
+                  ),
+                ),
+              if (plant.imageUrl != null && plant.imageUrl!.isNotEmpty) const SizedBox(height: 16),
+              Text(
+                plant.name,
+                style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: cs.onSurface,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  Chip(label: Text('${l.difficulty}: ${plant.difficulty}')),
+                  Chip(label: Text('${l.watering}: ${plant.wateringLevel}')),
+                  Chip(label: Text(l.growthPeriodMonths(growthMonths))),
+                  Chip(label: Text('${plant.harvestDurationDays} d harvest')),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _infoCard(
+                colorScheme: cs,
+                icon: Icons.thermostat,
+                iconColor: const Color(0xFFEA580C),
+                title: l.climateRequirementsTitle,
+                body: plant.climate,
+              ),
+              const SizedBox(height: 12),
+              _infoCard(
+                colorScheme: cs,
+                icon: Icons.water_drop_outlined,
+                iconColor: const Color(0xFF2563EB),
+                title: l.soilRequirementsTitle,
+                body: plant.soil,
+              ),
+              const SizedBox(height: 12),
+              _infoCard(
+                colorScheme: cs,
+                icon: Icons.eco,
+                iconColor: GrowColors.green600,
+                title: l.fertilizerNeedsTitle,
+                body: plant.fertilizers,
+              ),
+              const SizedBox(height: 28),
+              Text(
+                l.farmPlanningSectionTitle,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 16),
+              Text(l.farmMonthLabel, style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
               DropdownButtonFormField<int>(
                 value: _farmStartMonth,
@@ -75,7 +160,7 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
                 onChanged: _busy ? null : (v) => setState(() => _farmStartMonth = v ?? 1),
               ),
               const SizedBox(height: 24),
-              Text(l.locationLabel, style: Theme.of(context).textTheme.titleMedium),
+              Text(l.locationLabel, style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
               SegmentedButton<GrowLocationType>(
                 segments: [
@@ -87,7 +172,7 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
                 onSelectionChanged: (s) => setState(() => _loc = s.first),
               ),
               const SizedBox(height: 24),
-              Text(l.sunlightLabel, style: Theme.of(context).textTheme.titleMedium),
+              Text(l.sunlightLabel, style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
               SegmentedButton<SunlightLevel>(
                 segments: [
@@ -99,7 +184,7 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
                 onSelectionChanged: (s) => setState(() => _sun = s.first),
               ),
               const SizedBox(height: 24),
-              Text(l.wateringRecommendation, style: Theme.of(context).textTheme.titleMedium),
+              Text(l.wateringRecommendation, style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
               Card(
                 child: Padding(
@@ -162,4 +247,55 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
       ),
     );
   }
+}
+
+Widget _infoCard({
+  required ColorScheme colorScheme,
+  required IconData icon,
+  required Color iconColor,
+  required String title,
+  required String body,
+}) {
+  final cs = colorScheme;
+  return Card(
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(14),
+      side: BorderSide(color: cs.outline.withValues(alpha: 0.35)),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: iconColor, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: cs.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  body,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    height: 1.45,
+                    color: cs.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
