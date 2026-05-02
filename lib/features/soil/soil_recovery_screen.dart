@@ -9,6 +9,7 @@ import '../../core/theme/grow_colors.dart';
 import '../../core/widgets/ai_progress_dialog.dart';
 import '../../providers/providers.dart';
 import '../shell/grow_tool_shell.dart';
+import 'soil_recovery_challenge_section.dart';
 
 class SoilRecoveryScreen extends ConsumerStatefulWidget {
   const SoilRecoveryScreen({super.key});
@@ -130,41 +131,35 @@ class _SoilRecoveryScreenState extends ConsumerState<SoilRecoveryScreen> {
           const SizedBox(height: 20),
           Text('Soil recovery', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16)),
           const SizedBox(height: 8),
-          session == null
-              ? Text(
-                  'Start a grow session to see soil recovery suggestions.',
-                  style: GoogleFonts.inter(color: GrowColors.gray600),
-                )
-              : session.nutrientHeavy
-                  ? Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Soil Recovery Challenge',
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '${session.plantName} is a heavier feeder. After harvest, '
-                              'try a legume cover crop or grow beans, peas, or cluster beans next cycle '
-                              'to replenish nitrogen naturally.',
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text(
-                          'Your current crop is lighter on soil nutrients. Still rotate families yearly '
-                          'and add compost between cycles.',
-                        ),
-                      ),
-                    ),
+          if (session == null)
+            Text(
+              'Start a grow session to tie calendar reminders to your active grow.',
+              style: GoogleFonts.inter(color: GrowColors.gray600),
+            )
+          else if (session.nutrientHeavy)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  '${session.plantName} is a heavier feeder. After harvest, try a legume cover crop '
+                  '(below) to replenish nitrogen naturally.',
+                  style: GoogleFonts.inter(height: 1.4),
+                ),
+              ),
+            )
+          else
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Your current crop is lighter on soil nutrients. Still rotate families yearly '
+                  'and add compost between cycles — legume covers below remain a great option.',
+                  style: GoogleFonts.inter(height: 1.4),
+                ),
+              ),
+            ),
+          const SizedBox(height: 16),
+          const SoilRecoveryChallengeSection(),
         ],
       ),
     );

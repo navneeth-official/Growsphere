@@ -278,6 +278,31 @@ class SessionController extends Notifier<GrowSession?> {
     return streakDay ? 2 : 1;
   }
 
+  /// Adds a one-off reminder to the active grow’s task list (e.g. soil recovery challenge).
+  /// Returns false when there is no active session.
+  Future<bool> appendCustomCalendarTask({
+    required String title,
+    int daysFromToday = 3,
+  }) async {
+    final s = state;
+    if (s == null) return false;
+    final today = DateTime.now();
+    final base = DateTime(today.year, today.month, today.day);
+    final d = daysFromToday;
+    final offset = d < 0 ? 0 : (d > 3650 ? 3650 : d);
+    final due = base.add(Duration(days: offset));
+    final id = 'cal_${DateTime.now().microsecondsSinceEpoch}';
+    s.tasks.add(GrowTask(
+      id: id,
+      title: title,
+      dueDate: due,
+      stage: ActivityStage.soilPrep,
+    ));
+    await _persist();
+    _reEmitSession();
+    return true;
+  }
+
   Future<void> clearSession() async {
     final list = _storage.loadGardenListSync();
     for (final s in list) {

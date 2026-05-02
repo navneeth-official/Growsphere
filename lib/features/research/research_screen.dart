@@ -3,6 +3,7 @@ import 'package:growspehere_v1/l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/launch_google_search.dart';
 import '../../core/theme/grow_colors.dart';
 import '../shell/grow_layout.dart';
 
@@ -37,10 +38,14 @@ class ResearchScreen extends StatelessWidget {
                   ListTile(
                     title: Text(q, style: GoogleFonts.inter(fontSize: 15)),
                     trailing: const Icon(Icons.open_in_new, size: 20, color: GrowColors.gray600),
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Open: $q (demo)')),
-                      );
+                    onTap: () async {
+                      final ok = await launchGoogleSearch(q);
+                      if (!context.mounted) return;
+                      if (!ok) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Could not open Google search.')),
+                        );
+                      }
                     },
                   ),
               ],
