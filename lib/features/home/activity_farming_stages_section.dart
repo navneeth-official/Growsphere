@@ -14,10 +14,24 @@ import 'grow_task_checkbox_tile.dart';
 
 DateTime _dOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
+int _clampDayIndex(int raw, int harvestDurationDays) {
+  final hi = max(0, harvestDurationDays - 1);
+  if (raw < 0) return 0;
+  if (raw > hi) return hi;
+  return raw;
+}
+
+int _clampListIndex(int v, int length) {
+  if (length <= 0) return 0;
+  if (v < 0) return 0;
+  if (v >= length) return length - 1;
+  return v;
+}
+
 int _growDayIndex(GrowSession s, DateTime due) {
   final start = _dOnly(s.startedAt);
   final d = _dOnly(due);
-  return d.difference(start).inDays.clamp(0, max(0, s.harvestDurationDays - 1));
+  return _clampDayIndex(d.difference(start).inDays, s.harvestDurationDays);
 }
 
 List<GrowTask> _tasksForFarmPlanRow(GrowSession s, FarmPlanTask row) {
@@ -47,7 +61,7 @@ int _defaultSlotIndex(List<FarmPlanTask> flat, GrowSession s) {
   if (flat.isEmpty) return 0;
   final t = DateTime.now();
   final start = _dOnly(s.startedAt);
-  final dayIdx = _dOnly(t).difference(start).inDays.clamp(0, max(0, s.harvestDurationDays - 1));
+  final dayIdx = _clampDayIndex(_dOnly(t).difference(start).inDays, s.harvestDurationDays);
   final currentWeek = dayIdx ~/ 7 + 1;
   var best = 0;
   var bestDist = 9999;
@@ -60,7 +74,7 @@ int _defaultSlotIndex(List<FarmPlanTask> flat, GrowSession s) {
       best = i;
     }
   }
-  return best.clamp(0, flat.length - 1);
+  return _clampListIndex(best, flat.length);
 }
 
 /// One icon per farm-plan template row (same count/order as [FarmPlanMonthCards]).
@@ -104,14 +118,14 @@ class _ActivityFarmingStagesSectionState extends ConsumerState<ActivityFarmingSt
   int _effectiveSlot(List<FarmPlanTask> flat, GrowSession session) {
     if (flat.isEmpty) return 0;
     if (widget.selectedSlotIndex != null) {
-      return widget.selectedSlotIndex!.clamp(0, flat.length - 1);
+      return _clampListIndex(widget.selectedSlotIndex!, flat.length);
     }
-    if (_localSlot != null) return _localSlot!.clamp(0, flat.length - 1);
+    if (_localSlot != null) return _clampListIndex(_localSlot!, flat.length);
     return _defaultSlotIndex(flat, session);
   }
 
   void _setSlot(int i, List<FarmPlanTask> flat) {
-    final clamped = i.clamp(0, max(0, flat.length - 1));
+    final clamped = _clampListIndex(i, flat.length);
     setState(() => _localSlot = clamped);
     widget.onSlotChanged?.call(clamped);
   }
