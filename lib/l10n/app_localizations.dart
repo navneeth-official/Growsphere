@@ -181,6 +181,10 @@ abstract class AppLocalizations {
   String get farmStartMonthHint;
   String get createActivityCalendar;
   String get farmPlanningSectionTitle;
+  String get soilGuidanceTitle;
+  String get soilGuidanceDesc;
+  String get microgreensGuideTitle;
+  String get microgreensGuideDesc;
 
   String streaksIncreasedNTimes(int n);
   String growthPeriodMonths(int months);

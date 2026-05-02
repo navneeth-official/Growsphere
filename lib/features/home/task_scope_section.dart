@@ -10,13 +10,9 @@ import '../../core/theme/grow_colors.dart';
 import '../../domain/grow_session.dart';
 import '../../domain/grow_task.dart';
 import '../../providers/providers.dart';
+import 'grow_task_checkbox_tile.dart';
 
 DateTime _dOnly(DateTime d) => DateTime(d.year, d.month, d.day);
-
-bool _isToday(DateTime d) {
-  final t = DateTime.now();
-  return d.year == t.year && d.month == t.month && d.day == t.day;
-}
 
 enum _TaskScope { day, week, month }
 
@@ -150,8 +146,6 @@ class _TaskScopeSectionState extends ConsumerState<TaskScopeSection> {
     return m;
   }
 
-  int _weekIndexFromOffset(int dayOffset) => dayOffset ~/ 7;
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -217,7 +211,7 @@ class _TaskScopeSectionState extends ConsumerState<TaskScopeSection> {
             if (list.isEmpty)
               Text('Nothing scheduled for today.', style: GoogleFonts.inter(color: GrowColors.gray600))
             else
-              ...list.map((t) => _taskTile(context, t)),
+              ...list.map((t) => GrowTaskCheckboxTile(key: ValueKey(t.id), taskId: t.id)),
           ],
         ),
       ),
@@ -295,7 +289,7 @@ class _TaskScopeSectionState extends ConsumerState<TaskScopeSection> {
                                 ),
                               ),
                             ]
-                          : tasks.map((t) => _taskTile(context, t)).toList(),
+                          : tasks.map((t) => GrowTaskCheckboxTile(key: ValueKey(t.id), taskId: t.id)).toList(),
                     ),
                   ),
                 );
@@ -347,41 +341,12 @@ class _TaskScopeSectionState extends ConsumerState<TaskScopeSection> {
                     _openDays.remove(key);
                   }
                 }),
-                children: e.value.map((t) => _taskTile(context, t)).toList(),
+                children: e.value.map((t) => GrowTaskCheckboxTile(key: ValueKey(t.id), taskId: t.id)).toList(),
               );
             }).toList(),
           ),
         );
       }).toList(),
-    );
-  }
-
-  Widget _taskTile(BuildContext context, GrowTask task) {
-    final due = _dOnly(task.dueDate);
-    final editable = _isToday(due) && !task.completed;
-    return CheckboxListTile(
-      dense: true,
-      value: task.completed,
-      onChanged: editable
-          ? (v) async {
-              if (v != true) return;
-              final inc = await ref.read(sessionControllerProvider.notifier).completeTask(task.id);
-              if (!context.mounted) return;
-              setState(() {});
-              if (inc == 2) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Perfect day — streak +1. Check badges in Streaks.')),
-                );
-              } else if (inc == 1) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Task saved')));
-              }
-            }
-          : null,
-      title: Text(task.title, style: GoogleFonts.inter(fontSize: 14)),
-      subtitle: Text(
-        'Due ${due.month}/${due.day} · reminder ${task.dueHour}:00',
-        style: GoogleFonts.inter(fontSize: 12, color: GrowColors.gray600),
-      ),
     );
   }
 }

@@ -9,6 +9,7 @@ import '../../domain/grow_session.dart';
 import '../../providers/providers.dart';
 import '../calendar/farm_plan_month_cards.dart';
 import '../shell/grow_layout.dart';
+import 'activity_farming_stages_section.dart';
 import 'activity_month_calendar.dart';
 import 'task_scope_section.dart';
 
@@ -151,12 +152,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             label: Text(l.iWatered),
           ),
           const SizedBox(height: 24),
+          ActivityFarmingStagesSection(session: session),
+          const SizedBox(height: 24),
+          FarmStreakCard(session: session),
+          const SizedBox(height: 16),
           Text(l.activityCalendar, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           ActivityMonthCalendar(session: session),
           const SizedBox(height: 24),
-          FarmStreakCard(session: session),
-          const SizedBox(height: 12),
           TaskScopeSection(session: session),
         ],
       ),

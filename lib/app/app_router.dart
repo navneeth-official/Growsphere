@@ -21,6 +21,8 @@ import '../features/notifications/notifications_screen.dart';
 import '../features/sprinkler/sprinkler_screen.dart';
 import '../features/streaks/streak_hub_screen.dart';
 import '../features/streaks/streaks_screen.dart';
+import '../features/tools/microgreens_guide_screen.dart';
+import '../features/tools/soil_guidance_screen.dart';
 import '../features/tools/tools_hub_screen.dart';
 import '../features/weather/weather_screen.dart';
 import '../features/welcome/welcome_screen.dart';
@@ -47,6 +49,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/garden', builder: (_, __) => const MyGardenScreen()),
       GoRoute(path: '/plants', builder: (_, __) => const PlantPickScreen()),
       GoRoute(path: '/tools', builder: (_, __) => const ToolsHubScreen()),
+      GoRoute(path: '/soil-guidance', builder: (_, __) => const SoilGuidanceScreen()),
+      GoRoute(path: '/microgreens-guide', builder: (_, __) => const MicrogreensGuideScreen()),
       GoRoute(path: '/add-crop', builder: (_, __) => const AddCropScreen()),
       GoRoute(
         path: '/research',

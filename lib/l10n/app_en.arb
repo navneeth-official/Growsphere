@@ -169,6 +169,10 @@
   "farmStartMonthHint": "Enter month (e.g., January, March, etc.)",
   "createActivityCalendar": "Create Activity Calendar",
   "farmPlanningSectionTitle": "Farm planning",
+  "soilGuidanceTitle": "Soil Guidance",
+  "soilGuidanceDesc": "Legume green manures and soil recovery after heavy feeders",
+  "microgreensGuideTitle": "Microgreens Guide",
+  "microgreensGuideDesc": "Fast harvests, nutrients, and popular varieties",
   "streaksIncreasedNTimes": "STREAKS INCREASED {n} TIMES",
   "@streaksIncreasedNTimes": {
     "placeholders": {

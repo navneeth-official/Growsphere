@@ -458,6 +458,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get farmPlanningSectionTitle => 'Farm planning';
 
   @override
+  String get soilGuidanceTitle => 'Soil Guidance';
+
+  @override
+  String get soilGuidanceDesc =>
+      'Legume green manures and soil recovery after heavy feeders';
+
+  @override
+  String get microgreensGuideTitle => 'Microgreens Guide';
+
+  @override
+  String get microgreensGuideDesc =>
+      'Fast harvests, nutrients, and popular varieties';
+
+  @override
   String streaksIncreasedNTimes(int n) {
     return 'STREAKS INCREASED $n TIMES';
   }

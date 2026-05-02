@@ -457,6 +457,20 @@ class AppLocalizationsHi extends AppLocalizations {
   String get farmPlanningSectionTitle => 'खेत योजना';
 
   @override
+  String get soilGuidanceTitle => 'मिट्टी मार्गदर्शन';
+
+  @override
+  String get soilGuidanceDesc =>
+      'दलहन हरी खाद और भारी फसलों के बाद मिट्टी रिकवरी';
+
+  @override
+  String get microgreensGuideTitle => 'माइक्रोग्रीन्स गाइड';
+
+  @override
+  String get microgreensGuideDesc =>
+      'जल्दी कटाई, पोषक तत्व और लोकप्रिय किस्में';
+
+  @override
   String streaksIncreasedNTimes(int n) {
     return 'स्ट्रीक $n बार बढ़ी';
   }
