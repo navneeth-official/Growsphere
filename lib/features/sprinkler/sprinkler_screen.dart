@@ -11,10 +11,21 @@ import '../shell/grow_layout.dart';
 
 /// Sprinkler dashboard with simulated live sensors, AI-guided timing, and calendar handoff.
 class SprinklerScreen extends ConsumerStatefulWidget {
-  const SprinklerScreen({super.key, this.autoWater = false});
+  const SprinklerScreen({
+    super.key,
+    this.autoWater = false,
+    this.cropDisplayName,
+    this.gardenInstanceId,
+  });
 
   /// When true (e.g. from calendar), valve opens on entry for the "watering lab" flow.
   final bool autoWater;
+
+  /// When opened from a garden card, show crop in the title bar.
+  final String? cropDisplayName;
+
+  /// When set, switches the active grow session before building (per-crop sprinkler context).
+  final String? gardenInstanceId;
 
   @override
   ConsumerState<SprinklerScreen> createState() => _SprinklerScreenState();
@@ -35,6 +46,11 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
     super.initState();
     _durationMinutes = ref.read(growStorageProvider).wateringDurationMinutes;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final gid = widget.gardenInstanceId;
+      if (gid != null && gid.isNotEmpty) {
+        await ref.read(sessionControllerProvider.notifier).setActiveGardenPlant(gid);
+      }
       if (!mounted) return;
       if (widget.autoWater) {
         await ref.read(sprinklerRepositoryProvider).setOn(
@@ -120,8 +136,12 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
     final aiBodyColor = isDark ? cs.onSurfaceVariant : const Color(0xFF1E40AF);
     final aiAccentColor = isDark ? cs.primary : const Color(0xFF1D4ED8);
 
+    final innerTitle = (widget.cropDisplayName != null && widget.cropDisplayName!.trim().isNotEmpty)
+        ? '${l.sprinklerControlTitle} — ${widget.cropDisplayName!.trim()}'
+        : l.sprinklerControlTitle;
+
     return GrowLayout(
-      innerTitle: l.sprinklerControlTitle,
+      innerTitle: innerTitle,
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
         children: [

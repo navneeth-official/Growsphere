@@ -8,6 +8,7 @@ import 'grow_task.dart';
 /// Firestore: `users/{uid}/sessions/current` (single doc) or embedded fields.
 class GrowSession {
   GrowSession({
+    required this.gardenInstanceId,
     required this.plantId,
     required this.plantName,
     required this.difficulty,
@@ -34,6 +35,8 @@ class GrowSession {
     required this.farmPlanJson,
   });
 
+  /// Stable id for this grow in the multi-plant garden list (persisted).
+  final String gardenInstanceId;
   final String plantId;
   final String plantName;
   final String difficulty;
@@ -65,6 +68,7 @@ class GrowSession {
   final String farmPlanJson;
 
   Map<String, dynamic> toJson() => {
+        'gardenInstanceId': gardenInstanceId,
         'plantId': plantId,
         'plantName': plantName,
         'difficulty': difficulty,
@@ -106,8 +110,11 @@ class GrowSession {
         tasks: tasks,
       ).serialize();
     }
+    final plantId = json['plantId'] as String;
     return GrowSession(
-      plantId: json['plantId'] as String,
+      gardenInstanceId:
+          json['gardenInstanceId'] as String? ?? 'legacy_${plantId}_${startedAt.toIso8601String()}',
+      plantId: plantId,
       plantName: json['plantName'] as String,
       difficulty: json['difficulty'] as String,
       wateringLevel: json['wateringLevel'] as String,

@@ -7,6 +7,8 @@ import '../domain/plant.dart';
 
 const _kBox = 'growsphere_box';
 const _kSession = 'session_json';
+const _kGardenList = 'garden_sessions_json_v1';
+const _kActiveGardenInstanceId = 'active_garden_instance_id';
 const _kSeenWelcome = 'has_seen_welcome';
 const _kTheme = 'theme_mode';
 const _kLocale = 'locale_code';
@@ -42,26 +44,86 @@ class GrowStorage {
   }
 
   String initialRoute() {
-    if (loadSessionSync() != null) return '/home';
-    if (box.get(_kSeenWelcome) == true) return '/plants';
-    return '/welcome';
+    if (box.get(_kSeenWelcome) != true) return '/welcome';
+    return '/garden';
   }
 
-  GrowSession? loadSessionSync() {
+  void _migrateLegacySingleSessionIfNeeded() {
+    if (box.get(_kGardenList) != null) return;
     final raw = box.get(_kSession) as String?;
-    if (raw == null || raw.isEmpty) return null;
+    if (raw == null || raw.isEmpty) return;
     try {
-      return GrowSession.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      final map = Map<String, dynamic>.from(jsonDecode(raw) as Map<String, dynamic>);
+      if (map['gardenInstanceId'] == null) {
+        final pid = map['plantId'] as String? ?? 'plant';
+        final started = map['startedAt'] as String? ?? DateTime.now().toIso8601String();
+        map['gardenInstanceId'] = 'migrated_${pid}_$started';
+      }
+      box.put(_kGardenList, jsonEncode([map]));
+      box.put(_kActiveGardenInstanceId, map['gardenInstanceId'] as String);
+      box.delete(_kSession);
+    } catch (_) {}
+  }
+
+  List<GrowSession> loadGardenListSync() {
+    _migrateLegacySingleSessionIfNeeded();
+    final raw = box.get(_kGardenList) as String?;
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list.map((e) => GrowSession.fromJson(Map<String, dynamic>.from(e as Map))).toList();
     } catch (_) {
-      return null;
+      return [];
     }
   }
 
+  Future<void> saveGardenList(List<GrowSession> sessions) async {
+    await box.put(_kGardenList, jsonEncode(sessions.map((e) => e.toJson()).toList()));
+  }
+
+  String? get activeGardenInstanceId => box.get(_kActiveGardenInstanceId) as String?;
+
+  Future<void> setActiveGardenInstanceId(String? id) async {
+    if (id == null || id.isEmpty) {
+      await box.delete(_kActiveGardenInstanceId);
+    } else {
+      await box.put(_kActiveGardenInstanceId, id);
+    }
+  }
+
+  GrowSession? loadActiveSessionFromGarden() {
+    final list = loadGardenListSync();
+    if (list.isEmpty) return null;
+    final id = activeGardenInstanceId;
+    if (id != null) {
+      for (final s in list) {
+        if (s.gardenInstanceId == id) return s;
+      }
+    }
+    return list.first;
+  }
+
+  Future<void> mergeSessionIntoGardenList(GrowSession session) async {
+    final list = List<GrowSession>.from(loadGardenListSync());
+    final i = list.indexWhere((e) => e.gardenInstanceId == session.gardenInstanceId);
+    if (i >= 0) {
+      list[i] = session;
+    } else {
+      list.add(session);
+    }
+    await saveGardenList(list);
+  }
+
+  GrowSession? loadSessionSync() => loadActiveSessionFromGarden();
+
   Future<void> saveSession(GrowSession? session) async {
     if (session == null) {
+      await saveGardenList([]);
+      await setActiveGardenInstanceId(null);
       await box.delete(_kSession);
     } else {
-      await box.put(_kSession, jsonEncode(session.toJson()));
+      await mergeSessionIntoGardenList(session);
+      await setActiveGardenInstanceId(session.gardenInstanceId);
     }
   }
 

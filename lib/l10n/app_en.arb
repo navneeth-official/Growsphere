@@ -16,6 +16,7 @@
       "months": {"type": "int"}
     }
   },
+  "tabMyGarden": "Garden",
   "tabPlants": "Plants",
   "tabCalendar": "Calendar",
   "tabTools": "Tools",
@@ -27,6 +28,40 @@
   "difficulty": "Difficulty",
   "watering": "Watering",
   "continueLabel": "Continue",
+  "myGardenTitle": "My Garden",
+  "myGardenLocationHint": "Your area",
+  "myGardenEmpty": "No plants yet. Tap + to browse crops and add one.",
+  "addToGarden": "Add to garden",
+  "gardenSetupTitle": "Add to garden",
+  "gardenYourPlants": "Your plants",
+  "gardenPlantsCount": "{count, plural, =0{0 plants} =1{1 plant} other{{count} plants}}",
+  "@gardenPlantsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "plantTipHeader": "Plant tip",
+  "wateringAdjustmentHeader": "Watering note",
+  "gardenAiTipLoading": "Generating tips…",
+  "gardenWeatherUnavailable": "Weather unavailable",
+  "gardenWeatherLoadError": "Could not load weather. Check location permission.",
+  "gardenHumidityShort": "Humidity",
+  "gardenRainChanceShort": "Rain chance",
+  "recoPrefix": "Reco:",
+  "farmMonthLabel": "Farming month",
+  "locationSunLine": "{location} • {sun}",
+  "@locationSunLine": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      },
+      "sun": {
+        "type": "String"
+      }
+    }
+  },
   "climate": "Climate",
   "soil": "Soil",
   "fertilizers": "Fertilizers",

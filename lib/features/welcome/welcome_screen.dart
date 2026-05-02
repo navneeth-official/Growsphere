@@ -59,7 +59,7 @@ class WelcomeScreen extends ConsumerWidget {
                   FilledButton(
                     onPressed: () async {
                       await ref.read(growStorageProvider).setHasSeenWelcome(true);
-                      if (context.mounted) context.go('/plants');
+                      if (context.mounted) context.go('/garden');
                     },
                     style: FilledButton.styleFrom(
                       minimumSize: const Size(double.infinity, 52),

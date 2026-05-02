@@ -16,6 +16,7 @@
       "months": {"type": "int"}
     }
   },
+  "tabMyGarden": "बगीचा",
   "tabPlants": "पौधे",
   "tabCalendar": "कैलेंडर",
   "tabTools": "टूल्स",
@@ -24,6 +25,40 @@
   "backToTools": "टूल्स पर वापस जाएँ",
   "addPlantComingSoon": "यहाँ से कस्टम पौधा जल्द आएगा। नीचे सूची देखें।",
   "openPlantCatalog": "पौधे देखें",
+  "myGardenTitle": "मेरा बगीचा",
+  "myGardenLocationHint": "आपका क्षेत्र",
+  "myGardenEmpty": "अभी कोई पौधा नहीं। + दबाकर फसल चुनें और जोड़ें।",
+  "addToGarden": "बगीचे में जोड़ें",
+  "gardenSetupTitle": "बगीचे में जोड़ें",
+  "gardenYourPlants": "आपके पौधे",
+  "gardenPlantsCount": "{count, plural, =0{0 पौधे} =1{1 पौधा} other{{count} पौधे}}",
+  "@gardenPlantsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "plantTipHeader": "पौधे की सलाह",
+  "wateringAdjustmentHeader": "पानी की नोट",
+  "gardenAiTipLoading": "सलाह बना रहे हैं…",
+  "gardenWeatherUnavailable": "मौसम उपलब्ध नहीं",
+  "gardenWeatherLoadError": "मौसम नहीं मिला। लोकेशन अनुमति जाँचें।",
+  "gardenHumidityShort": "नमी",
+  "gardenRainChanceShort": "बारिश की संभावना",
+  "recoPrefix": "सलाह:",
+  "farmMonthLabel": "खेती का महीना",
+  "locationSunLine": "{location} • {sun}",
+  "@locationSunLine": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      },
+      "sun": {
+        "type": "String"
+      }
+    }
+  },
   "sprinklerControlTitle": "स्प्रिंकलर नियंत्रण",
   "toolsScreenTitle": "टूल्स",
   "openTool": "खोलें",

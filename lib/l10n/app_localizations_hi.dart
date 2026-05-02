@@ -183,6 +183,66 @@ class AppLocalizationsHi extends AppLocalizations {
   String get openPlantCatalog => 'पौधे देखें';
 
   @override
+  String get tabMyGarden => 'बगीचा';
+
+  @override
+  String get myGardenTitle => 'मेरा बगीचा';
+
+  @override
+  String get myGardenLocationHint => 'आपका क्षेत्र';
+
+  @override
+  String get myGardenEmpty =>
+      'अभी कोई पौधा नहीं। + दबाकर फसल चुनें और जोड़ें।';
+
+  @override
+  String get addToGarden => 'बगीचे में जोड़ें';
+
+  @override
+  String get gardenSetupTitle => 'बगीचे में जोड़ें';
+
+  @override
+  String get gardenYourPlants => 'आपके पौधे';
+
+  @override
+  String gardenPlantsCount(int count) {
+    if (count == 0) return '0 पौधे';
+    if (count == 1) return '1 पौधा';
+    return '$count पौधे';
+  }
+
+  @override
+  String get plantTipHeader => 'पौधे की सलाह';
+
+  @override
+  String get wateringAdjustmentHeader => 'पानी की नोट';
+
+  @override
+  String get gardenAiTipLoading => 'सलाह बना रहे हैं…';
+
+  @override
+  String get gardenWeatherUnavailable => 'मौसम उपलब्ध नहीं';
+
+  @override
+  String get gardenWeatherLoadError =>
+      'मौसम नहीं मिला। लोकेशन अनुमति जाँचें।';
+
+  @override
+  String get gardenHumidityShort => 'नमी';
+
+  @override
+  String get gardenRainChanceShort => 'बारिश की संभावना';
+
+  @override
+  String get recoPrefix => 'सलाह:';
+
+  @override
+  String get farmMonthLabel => 'खेती का महीना';
+
+  @override
+  String locationSunLine(String location, String sun) => '$location • $sun';
+
+  @override
   String get sprinklerControlTitle => 'स्प्रिंकलर नियंत्रण';
 
   @override

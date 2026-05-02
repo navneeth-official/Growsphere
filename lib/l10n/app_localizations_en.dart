@@ -184,6 +184,66 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openPlantCatalog => 'Browse plants';
 
   @override
+  String get tabMyGarden => 'Garden';
+
+  @override
+  String get myGardenTitle => 'My Garden';
+
+  @override
+  String get myGardenLocationHint => 'Your area';
+
+  @override
+  String get myGardenEmpty =>
+      'No plants yet. Tap + to browse crops and add one.';
+
+  @override
+  String get addToGarden => 'Add to garden';
+
+  @override
+  String get gardenSetupTitle => 'Add to garden';
+
+  @override
+  String get gardenYourPlants => 'Your plants';
+
+  @override
+  String gardenPlantsCount(int count) {
+    if (count == 0) return '0 plants';
+    if (count == 1) return '1 plant';
+    return '$count plants';
+  }
+
+  @override
+  String get plantTipHeader => 'Plant tip';
+
+  @override
+  String get wateringAdjustmentHeader => 'Watering note';
+
+  @override
+  String get gardenAiTipLoading => 'Generating tips…';
+
+  @override
+  String get gardenWeatherUnavailable => 'Weather unavailable';
+
+  @override
+  String get gardenWeatherLoadError =>
+      'Could not load weather. Check location permission.';
+
+  @override
+  String get gardenHumidityShort => 'Humidity';
+
+  @override
+  String get gardenRainChanceShort => 'Rain chance';
+
+  @override
+  String get recoPrefix => 'Reco:';
+
+  @override
+  String get farmMonthLabel => 'Farming month';
+
+  @override
+  String locationSunLine(String location, String sun) => '$location • $sun';
+
+  @override
   String get sprinklerControlTitle => 'Sprinkler Control';
 
   @override

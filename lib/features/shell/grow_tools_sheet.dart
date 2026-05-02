@@ -20,7 +20,7 @@ void showGrowToolsSheet(BuildContext context) {
           crossAxisSpacing: 12,
           childAspectRatio: 2.4,
           children: [
-            _tile(ctx, Icons.eco, l.home, () => ctx.go('/home')),
+            _tile(ctx, Icons.eco, l.tabMyGarden, () => ctx.go('/garden')),
             _tile(ctx, Icons.local_fire_department, l.streaksBadges, () => ctx.go('/streaks')),
             _tile(ctx, Icons.bug_report, l.pestControl, () => ctx.go('/pest')),
             _tile(ctx, Icons.payments, l.marketPrices, () => ctx.go('/market')),

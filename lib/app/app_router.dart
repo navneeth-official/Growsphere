@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../features/add_crop/add_crop_screen.dart';
-import '../features/ai_chat/ai_chat_screen.dart';
 import '../features/disease/disease_screen.dart';
+import '../features/ai_chat/ai_chat_screen.dart';
+import '../features/garden/my_garden_screen.dart';
+import '../features/plant/plant_garden_setup_screen.dart';
 import '../features/environment/environment_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/market/market_screen.dart';
@@ -35,13 +36,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         final container = ProviderScope.containerOf(context);
         final session = container.read(sessionControllerProvider);
         final path = state.matchedLocation;
-        if (path == '/home' && session == null) return '/plants';
+        if (path == '/home' && session == null) return '/garden';
       } catch (_) {}
       return null;
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/welcome', builder: (_, __) => const WelcomeScreen()),
+      GoRoute(path: '/garden', builder: (_, __) => const MyGardenScreen()),
       GoRoute(path: '/plants', builder: (_, __) => const PlantPickScreen()),
       GoRoute(path: '/tools', builder: (_, __) => const ToolsHubScreen()),
       GoRoute(path: '/add-crop', builder: (_, __) => const AddCropScreen()),
@@ -60,6 +62,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, s) => PlantDetailScreen(plantId: s.pathParameters['id']!),
       ),
       GoRoute(
+        path: '/plant-garden-setup/:id',
+        builder: (_, s) => PlantGardenSetupScreen(plantId: s.pathParameters['id']!),
+      ),
+      GoRoute(
         path: '/environment/:id',
         builder: (_, s) => EnvironmentScreen(plantId: s.pathParameters['id']!),
       ),
@@ -73,6 +79,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/sprinkler',
         builder: (_, s) => SprinklerScreen(
           autoWater: s.uri.queryParameters['autoWater'] == '1',
+          cropDisplayName: s.uri.queryParameters['crop'],
+          gardenInstanceId: s.uri.queryParameters['instanceId'],
         ),
       ),
       GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),

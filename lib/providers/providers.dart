@@ -12,6 +12,12 @@ export 'sprinkler_live_provider.dart';
 
 // sessionControllerProvider lives in session_controller.dart
 
+/// All plants in the garden (persisted list); bumps with [localDataRevisionProvider].
+final gardenListProvider = Provider<List<GrowSession>>((ref) {
+  ref.watch(localDataRevisionProvider);
+  return ref.watch(growStorageProvider).loadGardenListSync();
+});
+
 final sprinklerAiPlanProvider = FutureProvider.autoDispose<SprinklerAiPlan>((ref) async {
   final session = ref.watch(sessionControllerProvider);
   final g = ref.watch(geminiGenerativeServiceProvider);

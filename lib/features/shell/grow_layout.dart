@@ -8,7 +8,7 @@ import '../../core/theme/grow_colors.dart';
 import '../../providers/providers.dart';
 import 'grow_tools_sheet.dart';
 
-const _kTabRoots = {'/plants', '/home', '/tools', '/add-crop', '/research'};
+const _kTabRoots = {'/garden', '/plants', '/home', '/tools', '/add-crop', '/research'};
 
 /// V1 shell: green GROWSPHERE bar, optional white inner title row, max-width body, black-pill bottom nav.
 class GrowLayout extends StatelessWidget {
@@ -25,18 +25,19 @@ class GrowLayout extends StatelessWidget {
   final List<Widget>? innerActions;
 
   int? _tabIndex(String path) {
-    if (path == '/plants' || path.startsWith('/plants?')) return 0;
-    if (path == '/home') return 1;
+    if (path == '/garden' || path.startsWith('/garden?')) return 0;
+    if (path == '/plants' || path.startsWith('/plants?')) return 1;
+    if (path == '/home') return 2;
     if (path == '/tools' ||
         path == '/chat' ||
         path == '/disease' ||
         path == '/soil' ||
         path == '/pest' ||
         path == '/market') {
-      return 2;
+      return 3;
     }
-    if (path == '/add-crop') return 3;
-    if (path == '/research' || path.startsWith('/research/')) return 4;
+    if (path == '/add-crop') return 4;
+    if (path == '/research' || path.startsWith('/research/')) return 5;
     return null;
   }
 
@@ -81,33 +82,39 @@ class GrowLayout extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _BottomNavItem(
+                  icon: Icons.yard_outlined,
+                  label: l.tabMyGarden,
+                  selected: tab == 0,
+                  onTap: () => context.go('/garden'),
+                ),
+                _BottomNavItem(
                   icon: Icons.spa,
                   label: l.tabPlants,
-                  selected: tab == 0,
+                  selected: tab == 1,
                   onTap: () => context.go('/plants'),
                 ),
                 _BottomNavItem(
                   icon: Icons.calendar_today_outlined,
                   label: l.tabCalendar,
-                  selected: tab == 1,
+                  selected: tab == 2,
                   onTap: () => context.go('/home'),
                 ),
                 _BottomNavItem(
                   icon: Icons.chat_bubble_outline,
                   label: l.tabTools,
-                  selected: tab == 2,
+                  selected: tab == 3,
                   onTap: () => context.go('/tools'),
                 ),
                 _BottomNavItem(
                   icon: Icons.add,
                   label: l.tabAddPlant,
-                  selected: tab == 3,
+                  selected: tab == 4,
                   onTap: () => context.go('/add-crop'),
                 ),
                 _BottomNavItem(
                   icon: Icons.search,
                   label: l.tabResearch,
-                  selected: tab == 4,
+                  selected: tab == 5,
                   onTap: () => context.go('/research'),
                 ),
               ],

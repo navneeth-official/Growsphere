@@ -92,6 +92,25 @@ abstract class AppLocalizations {
   String get addPlantComingSoon;
   String get openPlantCatalog;
 
+  String get tabMyGarden;
+  String get myGardenTitle;
+  String get myGardenLocationHint;
+  String get myGardenEmpty;
+  String get addToGarden;
+  String get gardenSetupTitle;
+  String get gardenYourPlants;
+  String gardenPlantsCount(int count);
+  String get plantTipHeader;
+  String get wateringAdjustmentHeader;
+  String get gardenAiTipLoading;
+  String get gardenWeatherUnavailable;
+  String get gardenWeatherLoadError;
+  String get gardenHumidityShort;
+  String get gardenRainChanceShort;
+  String get recoPrefix;
+  String get farmMonthLabel;
+  String locationSunLine(String location, String sun);
+
   String get sprinklerControlTitle;
   String get toolsScreenTitle;
   String get openTool;

@@ -13,15 +13,25 @@ import 'route_refresh.dart';
 String _dayKey(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
+String _newGardenInstanceId(Plant plant) => 'g_${plant.id}_${DateTime.now().microsecondsSinceEpoch}';
+
 class SessionController extends Notifier<GrowSession?> {
   GrowStorage get _storage => ref.read(growStorageProvider);
   RouteRefreshNotifier get _router => ref.read(routeRefreshProvider);
 
   @override
-  GrowSession? build() => _storage.loadSessionSync();
+  GrowSession? build() => _storage.loadActiveSessionFromGarden();
 
   Future<void> _persist() async {
-    await _storage.saveSession(state);
+    final s = state;
+    if (s == null) {
+      await _storage.saveGardenList([]);
+      await _storage.setActiveGardenInstanceId(null);
+    } else {
+      await _storage.mergeSessionIntoGardenList(s);
+      await _storage.setActiveGardenInstanceId(s.gardenInstanceId);
+    }
+    ref.read(localDataRevisionProvider.notifier).state++;
     _router.refresh();
   }
 
@@ -32,17 +42,14 @@ class SessionController extends Notifier<GrowSession?> {
     state = GrowSession.fromJson(s.toJson());
   }
 
-  Future<void> startGrow({
+  /// Adds a new plant to the garden list and makes it the active session (does not remove others).
+  Future<void> addGardenPlant({
     required Plant plant,
     required GrowLocationType location,
     required SunlightLevel sunlight,
     required int farmPlanStartMonth1To12,
     required FarmPlanAiResult farmPlan,
   }) async {
-    final prev = state;
-    if (prev != null) {
-      await _storage.appendGrowArchive(prev.toJson());
-    }
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day);
     final rec = GrowSession.recommendationFor(
@@ -51,6 +58,7 @@ class SessionController extends Notifier<GrowSession?> {
       sun: sunlight,
     );
     state = GrowSession(
+      gardenInstanceId: _newGardenInstanceId(plant),
       plantId: plant.id,
       plantName: plant.name,
       difficulty: plant.difficulty,
@@ -77,6 +85,38 @@ class SessionController extends Notifier<GrowSession?> {
       farmPlanJson: farmPlan.serialize(),
     );
     await _persist();
+  }
+
+  /// Legacy name — same as [addGardenPlant].
+  Future<void> startGrow({
+    required Plant plant,
+    required GrowLocationType location,
+    required SunlightLevel sunlight,
+    required int farmPlanStartMonth1To12,
+    required FarmPlanAiResult farmPlan,
+  }) =>
+      addGardenPlant(
+        plant: plant,
+        location: location,
+        sunlight: sunlight,
+        farmPlanStartMonth1To12: farmPlanStartMonth1To12,
+        farmPlan: farmPlan,
+      );
+
+  Future<void> setActiveGardenPlant(String gardenInstanceId) async {
+    final list = _storage.loadGardenListSync();
+    GrowSession? found;
+    for (final e in list) {
+      if (e.gardenInstanceId == gardenInstanceId) {
+        found = e;
+        break;
+      }
+    }
+    if (found == null) return;
+    state = GrowSession.fromJson(found.toJson());
+    await _storage.setActiveGardenInstanceId(gardenInstanceId);
+    ref.read(localDataRevisionProvider.notifier).state++;
+    _router.refresh();
   }
 
   Future<WaterFeedback> logWatered() async {
@@ -239,12 +279,14 @@ class SessionController extends Notifier<GrowSession?> {
   }
 
   Future<void> clearSession() async {
-    final prev = state;
-    if (prev != null) {
-      await _storage.appendGrowArchive(prev.toJson());
+    final list = _storage.loadGardenListSync();
+    for (final s in list) {
+      await _storage.appendGrowArchive(s.toJson());
     }
     state = null;
-    await _storage.saveSession(null);
+    await _storage.saveGardenList([]);
+    await _storage.setActiveGardenInstanceId(null);
+    ref.read(localDataRevisionProvider.notifier).state++;
     _router.refresh();
   }
 }

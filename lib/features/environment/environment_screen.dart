@@ -134,7 +134,7 @@ class _EnvironmentScreenState extends ConsumerState<EnvironmentScreen> {
                             ),
                           );
                         }
-                        if (context.mounted) context.go('/home');
+                        if (context.mounted) context.go('/garden');
                       } finally {
                         if (mounted) setState(() => _busy = false);
                       }

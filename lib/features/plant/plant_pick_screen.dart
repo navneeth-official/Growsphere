@@ -207,7 +207,7 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                         trailing: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
                         onTap: () {
                           Navigator.of(sheetCtx).pop();
-                          context.push('/plant/${p.id}');
+                          context.push('/plant-garden-setup/${p.id}');
                         },
                       );
                     },
@@ -469,7 +469,7 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                             child: _CompactPlantCard(
                               plant: near[i],
                               monthsLabel: l.growthPeriodMonths(_monthsFromDays(near[i].harvestDurationDays)),
-                              onOpen: () => context.push('/plant/${near[i].id}'),
+                              onOpen: () => context.push('/plant-garden-setup/${near[i].id}'),
                             ),
                           ),
                         ),
@@ -509,7 +509,7 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                           child: _CompactPlantCard(
                             plant: customs[i],
                             monthsLabel: l.growthPeriodMonths(_monthsFromDays(customs[i].harvestDurationDays)),
-                            onOpen: () => context.push('/plant/${customs[i].id}'),
+                            onOpen: () => context.push('/plant-garden-setup/${customs[i].id}'),
                           ),
                         ),
                       ),
@@ -538,7 +538,7 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                             plant: p,
                             monthsLabel: l.growthPeriodMonths(_monthsFromDays(p.harvestDurationDays)),
                             categoryLabel: PlantCatalogCategory.labelOf(_categoryOf(p)),
-                            onOpen: () => context.push('/plant/${p.id}'),
+                            onOpen: () => context.push('/plant-garden-setup/${p.id}'),
                           ),
                         );
                       },

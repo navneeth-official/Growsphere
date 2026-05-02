@@ -6,12 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../core/farm_plan_template.dart';
 import '../../core/network/image_request_headers.dart';
 import '../../core/theme/grow_colors.dart';
 import '../../domain/plant.dart';
 import '../../providers/providers.dart';
-import '../../data/grow_storage.dart';
 import '../shell/grow_layout.dart';
 
 class PlantDetailScreen extends ConsumerStatefulWidget {
@@ -24,34 +22,9 @@ class PlantDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
-  final _monthCtrl = TextEditingController();
-
-  @override
-  void dispose() {
-    _monthCtrl.dispose();
-    super.dispose();
-  }
-
-  void _syncMonthField(GrowStorage storage) {
-    final m = storage.farmPlanStartMonthForPlant(widget.plantId);
-    if (m != null) {
-      final name = _monthNameEn(m);
-      if (_monthCtrl.text != name) _monthCtrl.text = name;
-    }
-  }
-
-  static String _monthNameEn(int m) {
-    const names = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
-    return names[(m - 1).clamp(0, 11)];
-  }
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final storage = ref.watch(growStorageProvider);
     ref.watch(localDataRevisionProvider);
     final async = ref.watch(_plantProvider(widget.plantId));
 
@@ -62,9 +35,6 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
             body: Center(child: Text(l.appTitle)),
           );
         }
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _syncMonthField(storage);
-        });
 
         final cs = Theme.of(context).colorScheme;
 
@@ -125,84 +95,10 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
                 title: l.fertilizerNeedsTitle,
                 body: p.fertilizers,
               ),
-              const SizedBox(height: 16),
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: BorderSide(color: cs.outline.withValues(alpha: 0.35)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_today_outlined, size: 22, color: cs.onSurface),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              l.whenPlanFarmTitle,
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                                color: cs.onSurface,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _monthCtrl,
-                        decoration: InputDecoration(
-                          hintText: l.farmStartMonthHint,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          isDense: true,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: cs.primary,
-                            foregroundColor: cs.onPrimary,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          onPressed: () async {
-                            final parsed = parseFarmStartMonth(_monthCtrl.text);
-                            if (parsed == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(l.farmStartMonthHint)),
-                              );
-                              return;
-                            }
-                            await storage.setFarmPlanStartMonth(p.id, parsed);
-                            ref.read(localDataRevisionProvider.notifier).state++;
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    '${l.whenPlanFarmTitle} — saved. Open ${l.environmentTitle.toLowerCase()} next; '
-                                    'your AI activity calendar is created when you continue there.',
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                          child: Text(l.createActivityCalendar),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
               const SizedBox(height: 24),
               FilledButton(
-                onPressed: () => context.push('/environment/${p.id}'),
-                child: Text(l.continueLabel),
+                onPressed: () => context.push('/plant-garden-setup/${p.id}'),
+                child: Text(l.addToGarden),
               ),
             ],
           ),
