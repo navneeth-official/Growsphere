@@ -33,6 +33,18 @@ class GeminiGenerativeService {
     return res.text?.trim() ?? '';
   }
 
+  /// Multi-turn chat: [history] is complete prior turns (user, model, user, model, …); [message] is the new user turn.
+  Future<String> generateChatReply({
+    required String systemInstruction,
+    required List<Content> history,
+    required String message,
+  }) async {
+    final model = _textModel(systemInstruction);
+    final chat = model.startChat(history: history);
+    final res = await chat.sendMessage(Content.text(message));
+    return res.text?.trim() ?? '';
+  }
+
   /// Multimodal: one image + text prompt. [mimeType] e.g. `image/jpeg` or `image/png`.
   Future<String> generateWithImage({
     required String systemInstruction,

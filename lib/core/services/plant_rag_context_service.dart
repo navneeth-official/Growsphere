@@ -63,4 +63,29 @@ class PlantRagContextService {
         '- location: ${s.location.name} | sun: ${s.sunlight.name}\n'
         '- watering note: ${s.wateringRecommendationText}';
   }
+
+  static const _visionPestClip = 140;
+
+  /// Short pest-focused catalog for vision tools. **No active session** — avoids biasing analysis toward the current grow.
+  Future<String> buildVisionAssistBlock() async {
+    final buf = StringBuffer();
+    buf.writeln(
+      'OPTIONAL_CATALOG (reference only). The photograph may show any plant, crop, weed, or non-plant object. '
+      'Identify strictly from visible evidence; do not assume the subject matches any row below.\n',
+    );
+    final List<Plant> list;
+    try {
+      list = await _plants.loadAll();
+    } catch (e) {
+      return '(catalog unavailable: $e)';
+    }
+    var n = 0;
+    for (final p in list) {
+      if (n >= 55) break;
+      n++;
+      final pest = p.pestNotes.length <= _visionPestClip ? p.pestNotes : '${p.pestNotes.substring(0, _visionPestClip)}…';
+      buf.writeln('- ${p.name}: common issues — $pest');
+    }
+    return buf.toString();
+  }
 }

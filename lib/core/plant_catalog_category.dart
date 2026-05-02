@@ -19,23 +19,23 @@ abstract final class PlantCatalogCategory {
         _ => 'Browse',
       };
 
-  /// Hero / carousel cover (Unsplash) per browse shelf.
+  /// Hero / carousel cover per browse shelf (Wikimedia Commons thumbnails — reliable hotlinking).
   static String coverImageUrl(String categoryId) {
     return switch (categoryId) {
       all =>
-        'https://images.unsplash.com/photo-1464226184804-fa7b189c6ebb?q=80&w=1200&auto=format&fit=crop',
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Agriculture_in_Volcano.jpg/960px-Agriculture_in_Volcano.jpg',
       vegetables =>
-        'https://images.unsplash.com/photo-1540420773420-33685e54c0bf?q=80&w=1200&auto=format&fit=crop',
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/Bright_red_tomato_and_cross_section02.jpg/960px-Bright_red_tomato_and_cross_section02.jpg',
       fruits =>
-        'https://images.unsplash.com/photo-1619566636858-411f3bd938e1?q=80&w=1200&auto=format&fit=crop',
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Pomegranates.jpg/960px-Pomegranates.jpg',
       kharif =>
-        'https://images.unsplash.com/photo-1586201375761-83865001e31c?q=80&w=1200&auto=format&fit=crop',
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Rice_plants_(IRRI).jpg/960px-Rice_plants_(IRRI).jpg',
       rabi =>
-        'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?q=80&w=1200&auto=format&fit=crop',
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Spikes_of_wheat.jpg/960px-Spikes_of_wheat.jpg',
       flowersHerbs =>
-        'https://images.unsplash.com/photo-1490759564078-f34be2b36687?q=80&w=1200&auto=format&fit=crop',
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Marigold_big_flower_2013.jpg/960px-Marigold_big_flower_2013.jpg',
       _ =>
-        'https://images.unsplash.com/photo-1464226184804-fa7b189c6ebb?q=80&w=1200&auto=format&fit=crop',
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Agriculture_in_Volcano.jpg/960px-Agriculture_in_Volcano.jpg',
     };
   }
 

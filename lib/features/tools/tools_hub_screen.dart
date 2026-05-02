@@ -62,6 +62,15 @@ class ToolsHubScreen extends StatelessWidget {
             onOpen: () => context.push('/pest'),
             subtitleColor: cs.onSurfaceVariant,
           ),
+          const SizedBox(height: 12),
+          _ToolCard(
+            circleColor: const Color(0xFFCA8A04),
+            icon: Icons.trending_up,
+            title: l.marketPrices,
+            subtitle: 'Regional INR/kg estimates, short price trends, and manual region override.',
+            onOpen: () => context.push('/market'),
+            subtitleColor: cs.onSurfaceVariant,
+          ),
         ],
       ),
     );

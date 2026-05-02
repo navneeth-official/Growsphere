@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/farm_plan_template.dart';
+import '../../core/network/image_request_headers.dart';
 import '../../core/theme/grow_colors.dart';
 import '../../domain/plant.dart';
 import '../../providers/providers.dart';
@@ -80,6 +81,7 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
                         ? Image.network(
                             p.imageUrl!,
                             fit: BoxFit.cover,
+                            headers: ImageRequestHeaders.standard,
                             errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image)),
                           )
                         : Image.file(

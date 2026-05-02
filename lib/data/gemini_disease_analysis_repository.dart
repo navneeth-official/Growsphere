@@ -16,44 +16,56 @@ class GeminiDiseaseAnalysisRepository implements DiseaseAnalysisRepository {
   final GeminiGenerativeService _gemini;
   final PlantRagContextService _rag;
 
+  static const _jsonKeys = '''
+Output only valid JSON (no markdown fences) with keys:
+- label: short title for the finding
+- severity: short phrase (confidence or urgency, not medical)
+- summary: 1–2 sentences overview
+- findings: what is visible in the image (plant parts, symptoms, pests, damage patterns, possible nutrient clues)
+- recommendations: practical steps (IPM, cultural controls, when to sample soil or call an expert); if pesticides mentioned, remind user to follow local label and agronomist advice
+- safetyNote: one sentence (e.g. do not eat unidentified plants, lab confirmation for regulated pests)
+All string values must be plain text: no markdown asterisks, no # headings, no backticks.
+''';
+
   @override
   Future<DiseaseReport> analyzeImageBytes(
     List<int> bytes, {
     String? plantName,
     ImageAnalysisIntent intent = ImageAnalysisIntent.plantHealthAndDisease,
   }) async {
-    final rag = await _rag.buildContextBlock();
+    final rag = await _rag.buildVisionAssistBlock();
     final u = Uint8List.fromList(bytes);
     final mime = _mimeFromBytes(u);
 
     final (String system, String prompt) = switch (intent) {
       ImageAnalysisIntent.plantHealthAndDisease => (
-          '''You are an agricultural image assistant for GrowSphere.
-Use the RAG block for crop-specific hints. Describe visible issues conservatively.
-Output **only** valid JSON with keys: label (short title), severity (short string), advice (2–5 sentences).''',
-          '''RAG_CONTEXT:
+          '''You are an agricultural vision assistant for GrowSphere.
+Analyze the photograph on its own merits. The user may be growing something completely different in the app — ignore app session.
+$_jsonKeys''',
+          '''REFERENCE_CATALOG (optional, do not assume the photo matches any crop listed):
 $rag
 
-${plantName != null ? 'User says they are growing: $plantName\n' : ''}
-Task: Assess plant health and any likely diseases or abiotic stress from the image.
+Task: From the image only — identify the plant or crop if reasonably possible, assess health, likely diseases or abiotic stress, signs of nutrient deficiency, and pest-related damage. Be conservative where the image is unclear.
 JSON only:''',
         ),
       ImageAnalysisIntent.pestIdentification => (
-          '''You are a pest identification assistant. Output **only** valid JSON: label, severity, advice.
-If uncertain, say so in advice.''',
-          '''RAG_CONTEXT (crop pest notes may help):
+          '''You are an expert integrated pest management (IPM) assistant.
+Identify likely pests, life stages, and damage from the image alone. Do not assume the crop matches any app catalog entry.
+$_jsonKeys''',
+          '''REFERENCE_CATALOG (optional pest notes for common crops — use only if consistent with visible evidence):
 $rag
 
-${plantName != null ? 'Crop context: $plantName\n' : ''}
-Task: Identify likely pests or damage signatures from the image.
+Task: Identify likely pest(s) or damage signatures, explain why, and give non-chemical and chemical control options where appropriate (legal doses: defer to local labels).
 JSON only:''',
         ),
       ImageAnalysisIntent.plantSpeciesIdentification => (
-          '''You are a plant identification assistant. Output **only** valid JSON: label (best species/common name guess), severity (confidence short phrase), advice (care + disclaimer).''',
-          '''RAG_CONTEXT:
+          '''You are a botany-aware crop assistant.
+Identify species, cultivar group, or closest alternatives from the image. If the image is not a plant, say so clearly.
+$_jsonKeys''',
+          '''REFERENCE_CATALOG (optional common names — image wins over catalog):
 $rag
 
-Task: Identify plant species or closest candidates from the image.
+Task: Species / common name identification, confidence, and brief cultivation or look-alike disclaimer.
 JSON only:''',
         ),
     };
@@ -80,17 +92,52 @@ JSON only:''',
       final end = raw.lastIndexOf('}');
       if (start >= 0 && end > start) {
         final j = jsonDecode(raw.substring(start, end + 1)) as Map<String, dynamic>;
+        final label = '${j['label'] ?? 'Result'}';
+        final severity = '${j['severity'] ?? 'n/a'}';
+        final summary = '${j['summary'] ?? ''}'.trim();
+        final findings = '${j['findings'] ?? ''}'.trim();
+        final rec = '${j['recommendations'] ?? ''}'.trim();
+        final safe = '${j['safetyNote'] ?? ''}'.trim();
+        final buf = StringBuffer();
+        if (summary.isNotEmpty) buf.writeln(summary);
+        if (findings.isNotEmpty) {
+          if (buf.isNotEmpty) buf.writeln();
+          buf.writeln('What we see');
+          buf.writeln(findings);
+        }
+        if (rec.isNotEmpty) {
+          buf.writeln();
+          buf.writeln('Recommendations');
+          buf.writeln(rec);
+        }
+        if (safe.isNotEmpty) {
+          buf.writeln();
+          buf.writeln(safe);
+        }
+        var advice = buf.toString().trim();
+        if (advice.isEmpty) advice = '${j['advice'] ?? raw}';
+        advice = _stripStrayMarkdown(advice);
         return DiseaseReport(
-          label: '${j['label'] ?? 'Result'}',
-          severity: '${j['severity'] ?? 'n/a'}',
-          advice: '${j['advice'] ?? raw}',
+          label: _stripStrayMarkdown(label),
+          severity: _stripStrayMarkdown(severity),
+          advice: advice,
         );
       }
     } catch (_) {}
     return DiseaseReport(
       label: 'Model response',
       severity: 'n/a',
-      advice: raw.isEmpty ? 'No response text from model.' : raw,
+      advice: _stripStrayMarkdown(raw.isEmpty ? 'No response text from model.' : raw),
     );
+  }
+
+  static String _stripStrayMarkdown(String s) {
+    var t = s;
+    t = t.replaceAllMapped(RegExp(r'\*\*([^*]+)\*\*'), (m) => m[1]!);
+    t = t.replaceAllMapped(RegExp(r'(?<!\*)\*([^*]+)\*(?!\*)'), (m) => m[1]!);
+    t = t.replaceAllMapped(RegExp(r'`([^`]+)`'), (m) => m[1]!);
+    t = t.replaceAll(RegExp(r'^#{1,6}\s*', multiLine: true), '');
+    t = t.replaceAll('**', '');
+    return t.trim();
   }
 }

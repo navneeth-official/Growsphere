@@ -35,7 +35,6 @@ class _DiseaseScreenState extends ConsumerState<DiseaseScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final session = ref.watch(sessionControllerProvider);
     return GrowToolShell(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -122,7 +121,6 @@ class _DiseaseScreenState extends ConsumerState<DiseaseScreen> {
                                 messages: kAiStatusDiseaseAnalysis,
                                 task: ref.read(diseaseRepositoryProvider).analyzeImageBytes(
                                       _bytes!.toList(),
-                                      plantName: session?.plantName,
                                     ),
                               );
                               if (!mounted) return;

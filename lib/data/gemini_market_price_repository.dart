@@ -17,51 +17,111 @@ class GeminiMarketPriceRepository implements MarketPriceRepository {
   final PlantRagContextService _rag;
 
   static const _system = '''
-You output **only JSON** (no markdown fences): a JSON array of objects.
-Each object: {"crop": string, "pricePerKg": number, "unit": "INR/kg", "changePercent": number}
-Use 3–8 major Indian retail/wholesale style crops (e.g. Tomato, Onion, Potato, Rice, Wheat).
-changePercent is a plausible daily-ish % move (can be negative). Prices are rough **indicative** INR/kg.
+You output only JSON (no markdown fences): one JSON object with two keys:
+1) "rows": array of {"crop": string, "pricePerKg": number, "unit": "INR/kg", "changePercent": number}
+   — 5–10 major crops traded in the USER_REGION. Prices are rough indicative INR/kg at mandi/yard level.
+   changePercent = plausible recent % swing (can be negative).
+2) "series": array of up to 4 objects {"crop": string, "points": [{"label": string, "price": number}, ...]}
+   — for each of the top few crops in "rows", include 7 chronological points (labels like "-6d","-5d",...,"0d")
+   showing a believable smooth trend ending at the row's pricePerKg at "0d". Values must stay positive.
+
+Use catalog typicalPricePerKg only as a weak prior. Mention in your head that figures are estimates.
 ''';
 
   @override
-  Future<List<MarketRow>> latestRows() async {
+  Future<MarketBoardResult> fetchBoard({
+    required String regionLabel,
+    String? geoHint,
+  }) async {
     final rag = await _rag.buildContextBlock();
     final now = DateTime.now();
+    final geo = geoHint == null || geoHint.isEmpty ? '(not provided)' : geoHint;
     final prompt = '''
-RAG_CONTEXT (catalog typicalPricePerKg hints — use as weak priors only, may be stale):
+USER_REGION (primary): $regionLabel
+DEVICE_GEO_HINT: $geo
+
+RAG_CONTEXT (catalog typicalPricePerKg — weak priors only):
 $rag
 
-Return JSON array only for crops relevant to this catalog and Indian context. Timestamp context: ${now.toIso8601String()}.
+Timestamp: ${now.toIso8601String()}
+Return the JSON object only.
 ''';
     final raw = await _gemini.generateText(systemInstruction: _system, userText: prompt);
-    return _parseRows(raw, now);
+    return _parseBoard(raw, now);
   }
 
-  List<MarketRow> _parseRows(String raw, DateTime updated) {
+  MarketBoardResult _parseBoard(String raw, DateTime updated) {
     try {
-      final start = raw.indexOf('[');
-      final end = raw.lastIndexOf(']');
+      final start = raw.indexOf('{');
+      final end = raw.lastIndexOf('}');
       if (start < 0 || end <= start) {
         return _fallback(updated);
       }
-      final list = jsonDecode(raw.substring(start, end + 1)) as List<dynamic>;
-      return list.map((e) {
-        final m = e as Map<String, dynamic>;
-        return MarketRow(
-          crop: '${m['crop']}',
-          pricePerKg: (m['pricePerKg'] as num).toDouble(),
-          unit: '${m['unit'] ?? 'INR/kg'}',
-          updated: updated,
-          changePercent: (m['changePercent'] as num?)?.toDouble() ?? 0,
-        );
-      }).toList();
+      final root = jsonDecode(raw.substring(start, end + 1)) as Map<String, dynamic>;
+      final rowsJson = root['rows'];
+      final seriesJson = root['series'];
+      final rows = <MarketRow>[];
+      if (rowsJson is List) {
+        for (final e in rowsJson) {
+          final m = e as Map<String, dynamic>;
+          rows.add(
+            MarketRow(
+              crop: '${m['crop']}',
+              pricePerKg: (m['pricePerKg'] as num).toDouble(),
+              unit: '${m['unit'] ?? 'INR/kg'}',
+              updated: updated,
+              changePercent: (m['changePercent'] as num?)?.toDouble() ?? 0,
+            ),
+          );
+        }
+      }
+      final series = <MarketPriceSeries>[];
+      if (seriesJson is List) {
+        for (final e in seriesJson) {
+          final m = e as Map<String, dynamic>;
+          final pts = m['points'];
+          if (pts is! List) continue;
+          final spots = <MarketPriceSpot>[];
+          for (final p in pts) {
+            if (p is! Map<String, dynamic>) continue;
+            spots.add(
+              MarketPriceSpot(
+                label: '${p['label'] ?? ''}',
+                pricePerKg: (p['price'] as num?)?.toDouble() ?? 0,
+              ),
+            );
+          }
+          if (spots.isNotEmpty) {
+            series.add(MarketPriceSeries(crop: '${m['crop']}', spots: spots));
+          }
+        }
+      }
+      if (rows.isEmpty) return _fallback(updated);
+      if (series.isEmpty) {
+        return MarketBoardResult(rows: rows, series: _syntheticSeries(rows));
+      }
+      return MarketBoardResult(rows: rows, series: series.take(4).toList());
     } catch (_) {
       return _fallback(updated);
     }
   }
 
-  List<MarketRow> _fallback(DateTime updated) => [
-        MarketRow(crop: 'Tomato', pricePerKg: 48, unit: 'INR/kg', updated: updated, changePercent: 0.5),
-        MarketRow(crop: 'Onion', pricePerKg: 32, unit: 'INR/kg', updated: updated, changePercent: -0.2),
-      ];
+  List<MarketPriceSeries> _syntheticSeries(List<MarketRow> rows) {
+    return rows.take(3).map((r) {
+      final spots = <MarketPriceSpot>[];
+      for (var i = 6; i >= 0; i--) {
+        final wobble = 1 + (i - 3) * 0.012 * (r.changePercent >= 0 ? 1 : -1);
+        spots.add(MarketPriceSpot(label: '-${i}d', pricePerKg: (r.pricePerKg * wobble).clamp(0.5, 99999)));
+      }
+      return MarketPriceSeries(crop: r.crop, spots: spots);
+    }).toList();
+  }
+
+  MarketBoardResult _fallback(DateTime updated) {
+    final rows = [
+      MarketRow(crop: 'Tomato', pricePerKg: 48, unit: 'INR/kg', updated: updated, changePercent: 0.5),
+      MarketRow(crop: 'Onion', pricePerKg: 32, unit: 'INR/kg', updated: updated, changePercent: -0.2),
+    ];
+    return MarketBoardResult(rows: rows, series: _syntheticSeries(rows));
+  }
 }

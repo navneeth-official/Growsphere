@@ -186,12 +186,18 @@ class _GreenHeader extends ConsumerWidget {
               const Icon(Icons.eco, color: Colors.white, size: 32),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  l.growsphereTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    l.growsphereTitle,
+                    maxLines: 1,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 0.2,
+                    ),
                   ),
                 ),
               ),

@@ -1,3 +1,5 @@
+import 'package:google_generative_ai/google_generative_ai.dart';
+
 import '../core/services/gemini_generative_service.dart';
 import '../core/services/plant_rag_context_service.dart';
 import 'ai_chat_repository.dart';
@@ -14,17 +16,26 @@ class GeminiAiChatRepository implements AiChatRepository {
   final PlantRagContextService _rag;
 
   static const _system = '''
-You are **GrowSphere AI Farming Assistant**, helping home and small-plot growers.
+You are GrowSphere AI Farming Assistant, helping home and small-plot growers.
 
 Rules:
-- Each user message begins with an `RAG_CONTEXT` section: treat matching crops and the active session as **authoritative app data**.
-- You may add **general agronomy** where RAG is silent, and clearly separate speculation from facts.
-- Be concise (short paragraphs or bullets). No medical claims; pesticides/legal doses → tell user to follow local labels and consult a certified agronomist.
-- If the question needs live market/exchange data you do not have, say estimates may differ and suggest checking local mandi/apps.
+- Each new user turn includes an RAG_CONTEXT block: treat matching crops and the active session as authoritative app data when relevant.
+- You may add general agronomy where RAG is silent; label speculation clearly.
+- Be helpful and structured. No medical claims; for pesticides and legal doses, tell the user to follow local labels and a certified agronomist.
+- If live market or exchange data is required, say figures are indicative and suggest checking local mandi or official apps.
+
+Formatting (critical — answers render in a plain chat bubble):
+- Do not use Markdown: no asterisks for bold, no # headings, no backticks, no blockquotes, no --- dividers.
+- Use short section titles in Title Case followed by a colon on their own line, or numbered steps 1. 2. 3., and blank lines between sections so the reply is easy to scan on a phone.
 ''';
 
   @override
-  Future<String> sendMessage(String userText, {String? plantContext}) async {
+  Future<String> sendMessage(
+    String userText, {
+    String? plantContext,
+    List<AiChatPriorTurn>? priorTurns,
+  }) async {
+    final prior = priorTurns ?? const [];
     final rag = await _rag.buildContextBlock();
     final extra = plantContext != null && plantContext.isNotEmpty
         ? '\nUSER_GROW_HINT: $plantContext\n'
@@ -36,10 +47,31 @@ $extra
 USER_QUESTION:
 $userText
 ''';
-    final out = await _gemini.generateText(
-      systemInstruction: _system,
-      userText: body,
-    );
-    return out.isEmpty ? 'No response from model. Check API key and model id.' : out;
+
+    final history = <Content>[];
+    for (final turn in prior) {
+      if (turn.isUser) {
+        history.add(Content.text(turn.text));
+      } else {
+        history.add(Content.model([TextPart(turn.text)]));
+      }
+    }
+
+    final out = prior.isEmpty
+        ? await _gemini.generateText(systemInstruction: _system, userText: body)
+        : await _gemini.generateChatReply(systemInstruction: _system, history: history, message: body);
+
+    final cleaned = _stripStrayMarkdown(out.isEmpty ? 'No response from model. Check API key and model id.' : out);
+    return cleaned;
+  }
+
+  static String _stripStrayMarkdown(String s) {
+    var t = s;
+    t = t.replaceAllMapped(RegExp(r'\*\*([^*]+)\*\*'), (m) => m[1]!);
+    t = t.replaceAllMapped(RegExp(r'(?<!\*)\*([^*]+)\*(?!\*)'), (m) => m[1]!);
+    t = t.replaceAllMapped(RegExp(r'`([^`]+)`'), (m) => m[1]!);
+    t = t.replaceAll(RegExp(r'^#{1,6}\s*', multiLine: true), '');
+    t = t.replaceAll('**', '');
+    return t.trim();
   }
 }

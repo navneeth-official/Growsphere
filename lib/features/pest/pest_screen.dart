@@ -119,14 +119,12 @@ class _PestScreenState extends ConsumerState<PestScreen> {
                             _busy = true;
                           });
                           try {
-                            final session = ref.read(sessionControllerProvider);
                             final r = await runWithAiProgress(
                               context,
                               title: 'Identifying pests',
                               messages: kAiStatusPestAnalysis,
                               task: ref.read(diseaseRepositoryProvider).analyzeImageBytes(
                                     b,
-                                    plantName: session?.plantName,
                                     intent: ImageAnalysisIntent.pestIdentification,
                                   ),
                             );

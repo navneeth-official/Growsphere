@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/network/image_request_headers.dart';
 import '../../core/plant_catalog_category.dart';
 import '../../data/location_crop_suggestions_repository.dart';
 import '../../domain/plant.dart';
@@ -148,6 +149,7 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                           child: Image.network(
                             PlantCatalogCategory.coverImageUrl(categoryId),
                             fit: BoxFit.cover,
+                            headers: ImageRequestHeaders.standard,
                             errorBuilder: (_, __, ___) =>
                                 ColoredBox(color: cs.primary.withValues(alpha: 0.35)),
                           ),
@@ -263,49 +265,92 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    child: Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 8,
-                      runSpacing: 8,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Filter', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: cs.onSurface)),
-                        ChoiceChip(
-                          label: const Text('All levels'),
-                          selected: _difficultyFilter == null,
-                          onSelected: (_) => setState(() => _difficultyFilter = null),
-                        ),
-                        ChoiceChip(
-                          label: const Text('Easy'),
-                          selected: _difficultyFilter == 'easy',
-                          onSelected: (_) => setState(() => _difficultyFilter = 'easy'),
-                        ),
-                        ChoiceChip(
-                          label: const Text('Medium'),
-                          selected: _difficultyFilter == 'medium',
-                          onSelected: (_) => setState(() => _difficultyFilter = 'medium'),
-                        ),
-                        ChoiceChip(
-                          label: const Text('Hard'),
-                          selected: _difficultyFilter == 'hard',
-                          onSelected: (_) => setState(() => _difficultyFilter = 'hard'),
-                        ),
-                        const SizedBox(width: 8),
-                        Text('Sort', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: cs.onSurface)),
-                        DropdownButtonHideUnderline(
-                          child: DropdownButton<_PlantSort>(
-                            value: _sort,
-                            borderRadius: BorderRadius.circular(12),
-                            items: const [
-                              DropdownMenuItem(value: _PlantSort.nameAZ, child: Text('Name A–Z')),
-                              DropdownMenuItem(value: _PlantSort.harvestShort, child: Text('Harvest: shortest')),
-                              DropdownMenuItem(value: _PlantSort.harvestLong, child: Text('Harvest: longest')),
-                              DropdownMenuItem(
-                                value: _PlantSort.difficultyEasyFirst,
-                                child: Text('Difficulty: easy first'),
-                              ),
-                            ],
-                            onChanged: (v) => setState(() => _sort = v ?? _PlantSort.nameAZ),
+                        Text(
+                          'Filter',
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            color: cs.onSurface,
                           ),
+                        ),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            ChoiceChip(
+                              label: const Text('All levels', style: TextStyle(fontSize: 12)),
+                              visualDensity: VisualDensity.compact,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+                              selected: _difficultyFilter == null,
+                              onSelected: (_) => setState(() => _difficultyFilter = null),
+                            ),
+                            ChoiceChip(
+                              label: const Text('Easy', style: TextStyle(fontSize: 12)),
+                              visualDensity: VisualDensity.compact,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+                              selected: _difficultyFilter == 'easy',
+                              onSelected: (_) => setState(() => _difficultyFilter = 'easy'),
+                            ),
+                            ChoiceChip(
+                              label: const Text('Medium', style: TextStyle(fontSize: 12)),
+                              visualDensity: VisualDensity.compact,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+                              selected: _difficultyFilter == 'medium',
+                              onSelected: (_) => setState(() => _difficultyFilter = 'medium'),
+                            ),
+                            ChoiceChip(
+                              label: const Text('Hard', style: TextStyle(fontSize: 12)),
+                              visualDensity: VisualDensity.compact,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+                              selected: _difficultyFilter == 'hard',
+                              onSelected: (_) => setState(() => _difficultyFilter = 'hard'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Text(
+                              'Sort',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: cs.onSurface,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<_PlantSort>(
+                                    isDense: true,
+                                    value: _sort,
+                                    borderRadius: BorderRadius.circular(12),
+                                    style: GoogleFonts.inter(fontSize: 13, color: cs.onSurface),
+                                    items: const [
+                                      DropdownMenuItem(value: _PlantSort.nameAZ, child: Text('Name A–Z')),
+                                      DropdownMenuItem(value: _PlantSort.harvestShort, child: Text('Harvest: shortest')),
+                                      DropdownMenuItem(value: _PlantSort.harvestLong, child: Text('Harvest: longest')),
+                                      DropdownMenuItem(
+                                        value: _PlantSort.difficultyEasyFirst,
+                                        child: Text('Difficulty: easy first'),
+                                      ),
+                                    ],
+                                    onChanged: (v) => setState(() => _sort = v ?? _PlantSort.nameAZ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -556,6 +601,7 @@ class _CategoryHeroCard extends StatelessWidget {
                 Image.network(
                   coverImageUrl,
                   fit: BoxFit.cover,
+                  headers: ImageRequestHeaders.standard,
                   errorBuilder: (_, __, ___) => ColoredBox(
                     color: cs.primary.withValues(alpha: 0.45),
                     child: Icon(Icons.eco, size: 48, color: cs.onPrimary.withValues(alpha: 0.9)),
@@ -802,6 +848,7 @@ class _PlantThumb extends StatelessWidget {
       return Image.network(
         u,
         fit: BoxFit.cover,
+        headers: ImageRequestHeaders.standard,
         errorBuilder: (_, __, ___) => ColoredBox(
           color: cs.primary.withValues(alpha: 0.15),
           child: Icon(Icons.eco, color: cs.primary, size: 36),

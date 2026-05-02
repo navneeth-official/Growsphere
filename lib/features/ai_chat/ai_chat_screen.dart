@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/widgets/ai_progress_dialog.dart';
+import '../../data/ai_chat_repository.dart';
 import '../../providers/providers.dart';
 import '../shell/grow_tool_shell.dart';
 
@@ -42,12 +43,19 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     setState(() => _msgs.add((true, t)));
     _c.clear();
     final ctx = session == null ? null : 'Growing ${session.plantName}';
+    final prior = <AiChatPriorTurn>[
+      for (var i = 0; i < _msgs.length - 1; i++) (isUser: _msgs[i].$1, text: _msgs[i].$2),
+    ];
     try {
       final reply = await runWithAiProgress(
         context,
         title: 'Grow assistant',
         messages: kAiStatusChatReply,
-        task: ref.read(aiChatRepositoryProvider).sendMessage(t, plantContext: ctx),
+        task: ref.read(aiChatRepositoryProvider).sendMessage(
+              t,
+              plantContext: ctx,
+              priorTurns: prior.isEmpty ? null : prior,
+            ),
       );
       if (!mounted) return;
       setState(() => _msgs.add((false, reply)));

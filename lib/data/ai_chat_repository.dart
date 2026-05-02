@@ -1,11 +1,22 @@
+/// Prior chat turns in order: user → model → user → model → … (excludes the latest user message passed as [userText]).
+typedef AiChatPriorTurn = ({bool isUser, String text});
+
 /// **Firebase:** HTTPS Callable `chatPlantAssistant` with model + user uid audit.
 abstract class AiChatRepository {
-  Future<String> sendMessage(String userText, {String? plantContext});
+  Future<String> sendMessage(
+    String userText, {
+    String? plantContext,
+    List<AiChatPriorTurn>? priorTurns,
+  });
 }
 
 class LocalKeywordAiRepository implements AiChatRepository {
   @override
-  Future<String> sendMessage(String userText, {String? plantContext}) async {
+  Future<String> sendMessage(
+    String userText, {
+    String? plantContext,
+    List<AiChatPriorTurn>? priorTurns,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 400));
     final t = userText.toLowerCase();
     if (t.contains('water')) {
