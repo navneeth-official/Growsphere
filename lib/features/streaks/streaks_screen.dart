@@ -8,8 +8,10 @@ import '../shell/grow_tools_sheet.dart';
 
 const _badgeMeta = <String, (String title, String desc)>{
   'badge_first_water': ('First drink', 'Logged your first watering'),
-  'badge_streak_7': ('Week warrior', 'Reached a 7-day streak'),
-  'badge_streak_30': ('Monthly master', '30-day streak milestone'),
+  'badge_streak_chain_3': ('On a roll', '3 perfect task days in a row'),
+  'badge_streak_7': ('Week warrior', '7 perfect task days in a row'),
+  'badge_streak_chain_14': ('Fortnight focus', '14 perfect task days in a row'),
+  'badge_streak_30': ('Monthly master', '30 perfect task days in a row'),
   'badge_thriving': ('Thriving', 'Plant health 90% or more'),
   'badge_task_master': ('Task master', 'Completed 20 care tasks'),
 };
@@ -28,6 +30,11 @@ class StreaksScreen extends ConsumerWidget {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                Text(
+                  'The chart shows your streak count after each day you cleared every due task.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
                 SizedBox(
                   height: 220,
                   child: Card(

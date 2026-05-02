@@ -4,31 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/grow_colors.dart';
+import '../../domain/activity_stage.dart';
 import '../../domain/grow_session.dart';
 
 DateTime _dOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
-/// True when [day] has at least one due task and every such task is completed.
-bool _allTasksDoneForDay(GrowSession session, DateTime day) {
-  final key = _dOnly(day);
-  final due = session.tasks.where((t) => _dOnly(t.dueDate) == key).toList();
-  if (due.isEmpty) return false;
-  return due.every((t) => t.completed);
-}
-
-/// Farm-plan quarter (4 blocks) + week-within-block → fill color.
-Color _colorForSessionDay(int dayIndex, int totalDays) {
-  if (totalDays <= 0) return GrowColors.gray200;
-  final n = totalDays;
-  final block = min(3, (dayIndex * 4) ~/ max(1, n));
-  final blockStart = (block * n) ~/ 4;
-  final weekInBlock = max(0, dayIndex - blockStart) ~/ 7;
-  final dim = weekInBlock.isOdd ? 0.72 : 0.9;
-  return switch (block) {
-    0 => Color.lerp(Colors.brown.shade400, Colors.brown.shade200, 0.35)!.withValues(alpha: dim),
-    1 => Colors.lightGreen.shade500.withValues(alpha: dim),
-    2 => Colors.amber.shade600.withValues(alpha: dim),
-    _ => Colors.orange.shade500.withValues(alpha: dim),
+Color _fillForGrowDay(int dayIndex, int totalDays) {
+  final stage = GrowSession.stageForDayIndex(dayIndex, totalDays);
+  final dim = (dayIndex ~/ 7).isOdd ? 0.72 : 0.92;
+  return switch (stage) {
+    ActivityStage.soilPrep =>
+      Color.lerp(Colors.brown.shade400, Colors.brown.shade200, 0.35)!.withValues(alpha: dim),
+    ActivityStage.seeding => Colors.lightGreen.shade500.withValues(alpha: dim),
+    ActivityStage.fertilizing => Colors.amber.shade600.withValues(alpha: dim),
+    ActivityStage.harvesting => Colors.orange.shade500.withValues(alpha: dim),
   };
 }
 
@@ -205,8 +194,8 @@ class _ActivityMonthCalendarState extends State<ActivityMonthCalendar> {
                 ),
               );
             }
-            final fill = _colorForSessionDay(off, _n);
-            final tick = _allTasksDoneForDay(widget.session, day);
+            final fill = _fillForGrowDay(off, _n);
+            final tick = GrowSession.allDueTasksCompleteForDay(widget.session, day);
             return Tooltip(
               message: '${day.month}/${day.day} · grow day ${off + 1} of $_n',
               child: Stack(
@@ -221,7 +210,11 @@ class _ActivityMonthCalendarState extends State<ActivityMonthCalendar> {
                     ),
                     child: Text(
                       '$dom',
-                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.black87),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.88),
+                      ),
                     ),
                   ),
                   if (tick)
@@ -237,7 +230,7 @@ class _ActivityMonthCalendarState extends State<ActivityMonthCalendar> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Colours follow farm-plan blocks by week (soil → establishment → feeding → finish). '
+          'Colours: week 1 = soil prep, then 2-week blocks (establish → feed → finish). '
           'A tick appears when every task due that day is completed.',
           style: GoogleFonts.inter(fontSize: 11, color: GrowColors.gray600, height: 1.35),
         ),

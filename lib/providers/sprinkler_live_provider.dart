@@ -8,6 +8,7 @@ import '../core/services/notification_service.dart';
 import '../core/services/sprinkler_ai_advice_service.dart';
 import '../core/services/sensor_notification_coordinator.dart';
 import 'base_providers.dart';
+import 'session_controller.dart';
 
 enum SprinklerTimingQuality { idle, watering, idealWindow, warnStop, over }
 
@@ -110,6 +111,7 @@ class SprinklerLiveNotifier extends AutoDisposeNotifier<SprinklerLiveState> {
   Timer? _timer;
   SprinklerAiPlan _plan = SprinklerAiPlan.fallback;
   bool _overAlertSent = false;
+  bool _autoDurationStopSent = false;
   int _lastSnapWriteMs = 0;
   int _lastCompareMs = 0;
 
@@ -129,6 +131,7 @@ class SprinklerLiveNotifier extends AutoDisposeNotifier<SprinklerLiveState> {
     final storage = ref.read(growStorageProvider);
     if (!storage.sprinklerOn) {
       _overAlertSent = false;
+      _autoDurationStopSent = false;
     }
     final next = state.evolve(
       plan: _plan,
@@ -136,6 +139,14 @@ class SprinklerLiveNotifier extends AutoDisposeNotifier<SprinklerLiveState> {
       waterStart: storage.sprinklerWaterStartedAt,
     );
     state = next;
+    final targetSec = storage.sprinklerTargetWateringSeconds;
+    if (storage.sprinklerOn &&
+        targetSec != null &&
+        next.secondsWatering >= targetSec &&
+        !_autoDurationStopSent) {
+      _autoDurationStopSent = true;
+      unawaited(_autoStopAtTarget(storage, next));
+    }
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     if (nowMs - _lastSnapWriteMs > 45000) {
       _lastSnapWriteMs = nowMs;
@@ -177,6 +188,19 @@ class SprinklerLiveNotifier extends AutoDisposeNotifier<SprinklerLiveState> {
       body: body,
     );
     ref.read(inAppNotificationsRevisionProvider.notifier).state++;
+  }
+
+  Future<void> _autoStopAtTarget(GrowStorage storage, SprinklerLiveState live) async {
+    await storage.setSprinklerOn(false);
+    final plan = _plan;
+    final over = live.quality == SprinklerTimingQuality.over;
+    await ref.read(sessionControllerProvider.notifier).finishSprinklerSession(
+          overwatered: over,
+          secondsWatered: live.secondsWatering,
+          idealSecondsMid: plan.idealSecondsMid,
+          logCareFromCalendar: storage.pendingSprinklerFromCalendar,
+        );
+    await storage.setPendingSprinklerFromCalendar(false);
   }
 }
 

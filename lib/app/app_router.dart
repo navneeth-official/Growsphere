@@ -21,14 +21,13 @@ import '../features/streaks/streaks_screen.dart';
 import '../features/tools/tools_hub_screen.dart';
 import '../features/weather/weather_screen.dart';
 import '../features/welcome/welcome_screen.dart';
+import '../features/welcome/splash_screen.dart';
 import '../providers/providers.dart';
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   final refresh = ref.read(routeRefreshProvider);
-  final storage = ref.read(growStorageProvider);
-  final initial = storage.initialRoute();
   return GoRouter(
-    initialLocation: initial,
+    initialLocation: '/splash',
     refreshListenable: refresh,
     redirect: (context, state) {
       try {
@@ -40,6 +39,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/welcome', builder: (_, __) => const WelcomeScreen()),
       GoRoute(path: '/plants', builder: (_, __) => const PlantPickScreen()),
       GoRoute(path: '/tools', builder: (_, __) => const ToolsHubScreen()),

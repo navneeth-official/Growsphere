@@ -4,12 +4,13 @@ import '../core/services/sprinkler_ai_advice_service.dart';
 import '../domain/grow_session.dart';
 import 'base_providers.dart';
 import 'session_controller.dart';
+export 'session_controller.dart';
 import 'sprinkler_live_provider.dart';
 
 export 'base_providers.dart';
 export 'sprinkler_live_provider.dart';
 
-final sessionControllerProvider = NotifierProvider<SessionController, GrowSession?>(SessionController.new);
+// sessionControllerProvider lives in session_controller.dart
 
 final sprinklerAiPlanProvider = FutureProvider.autoDispose<SprinklerAiPlan>((ref) async {
   final session = ref.watch(sessionControllerProvider);

@@ -59,6 +59,9 @@ class SessionController extends Notifier<GrowSession?> {
       tasks: GrowSession.generateTasks(start: start, harvestDays: plant.harvestDurationDays),
       waterLog: [],
       streak: 0,
+      bestStreak: 0,
+      lastStreakCreditDayKey: null,
+      perfectStreakDayLog: [],
       plantHealth: 85,
       streakByDay: {},
       earnedBadgeIds: [],
@@ -79,23 +82,18 @@ class SessionController extends Notifier<GrowSession?> {
     s.waterLog.add(now);
     switch (fb) {
       case WaterFeedback.perfect:
-        s.streak += 1;
         s.plantHealth = (s.plantHealth + 6).clamp(0, 100);
-        _awardBadges(s);
         break;
       case WaterFeedback.overwatering:
-        s.streak = (s.streak - 2).clamp(0, 9999);
         s.plantHealth = (s.plantHealth - 14).clamp(0, 100);
         break;
       case WaterFeedback.missed:
-        s.streak = (s.streak - 1).clamp(0, 9999);
         s.plantHealth = (s.plantHealth - 10).clamp(0, 100);
         break;
       case WaterFeedback.suboptimal:
         s.plantHealth = (s.plantHealth - 3).clamp(0, 100);
         break;
     }
-    s.streakByDay[_dayKey(now)] = s.streak;
     _awardBadges(s);
     await _persist();
     _reEmitSession();
@@ -130,6 +128,7 @@ class SessionController extends Notifier<GrowSession?> {
           t.completedAt = today;
         }
       }
+      _maybeCreditPerfectDayStreak(s, todayD);
     }
     WaterFeedback? fb;
     if (logCareFromCalendar) {
@@ -139,8 +138,6 @@ class SessionController extends Notifier<GrowSession?> {
       } else {
         fb = WaterFeedback.suboptimal;
       }
-    } else {
-      s.streakByDay[_dayKey(DateTime.now())] = s.streak;
     }
     _awardBadges(s);
     await _persist();
@@ -155,13 +152,10 @@ class SessionController extends Notifier<GrowSession?> {
     final now = DateTime.now();
     s.waterLog.add(now);
     if (overwatered) {
-      s.streak = (s.streak - 2).clamp(0, 9999);
       s.plantHealth = (s.plantHealth - 14).clamp(0, 100);
     } else {
-      s.streak += 1;
       s.plantHealth = (s.plantHealth + 6).clamp(0, 100);
     }
-    s.streakByDay[_dayKey(now)] = s.streak;
   }
 
   void _awardBadges(GrowSession s) {
@@ -170,14 +164,41 @@ class SessionController extends Notifier<GrowSession?> {
     }
 
     if (s.waterLog.isNotEmpty) add('badge_first_water');
+    if (s.streak >= 3) add('badge_streak_chain_3');
     if (s.streak >= 7) add('badge_streak_7');
+    if (s.streak >= 14) add('badge_streak_chain_14');
     if (s.streak >= 30) add('badge_streak_30');
     if (s.plantHealth >= 90) add('badge_thriving');
     final done = s.tasks.where((t) => t.completed).length;
     if (done >= 20) add('badge_task_master');
   }
 
-  /// Returns streak multiplier message count (2 if double award).
+  /// +1 streak only when every task due that calendar day is done; [creditDay] is the due date (calendar day).
+  bool _maybeCreditPerfectDayStreak(GrowSession s, DateTime creditDay) {
+    if (!GrowSession.allDueTasksCompleteForDay(s, creditDay)) return false;
+    final key = _dayKey(creditDay);
+    if (s.lastStreakCreditDayKey == key) return false;
+
+    final start = DateTime(s.startedAt.year, s.startedAt.month, s.startedAt.day);
+    final y = creditDay.subtract(const Duration(days: 1));
+    if (y.isBefore(start)) {
+      s.streak = 1;
+    } else if (GrowSession.allDueTasksCompleteForDay(s, y)) {
+      s.streak += 1;
+    } else {
+      s.streak = 1;
+    }
+    s.lastStreakCreditDayKey = key;
+    if (s.bestStreak < s.streak) s.bestStreak = s.streak;
+    s.perfectStreakDayLog.add(key);
+    while (s.perfectStreakDayLog.length > 40) {
+      s.perfectStreakDayLog.removeAt(0);
+    }
+    s.streakByDay[key] = s.streak;
+    return true;
+  }
+
+  /// Returns `2` when today became a perfect streak day, `1` when task saved only, `0` if no-op.
   Future<int> completeTask(String taskId) async {
     final s = state;
     if (s == null) return 0;
@@ -195,23 +216,18 @@ class SessionController extends Notifier<GrowSession?> {
     final onTime = due == todayD;
     t.completed = true;
     t.completedAt = today;
-    var inc = 0;
     if (onTime) {
-      inc = 2;
-      s.streak += 2;
       s.plantHealth = (s.plantHealth + 4).clamp(0, 100);
     } else if (todayD.isBefore(due)) {
-      inc = 1;
-      s.streak += 1;
       s.plantHealth = (s.plantHealth + 2).clamp(0, 100);
     } else {
       s.plantHealth = (s.plantHealth - 5).clamp(0, 100);
     }
-    s.streakByDay[_dayKey(today)] = s.streak;
+    final streakDay = _maybeCreditPerfectDayStreak(s, due);
     _awardBadges(s);
     await _persist();
     _reEmitSession();
-    return inc;
+    return streakDay ? 2 : 1;
   }
 
   Future<void> clearSession() async {
@@ -220,3 +236,5 @@ class SessionController extends Notifier<GrowSession?> {
     _router.refresh();
   }
 }
+
+final sessionControllerProvider = NotifierProvider<SessionController, GrowSession?>(SessionController.new);

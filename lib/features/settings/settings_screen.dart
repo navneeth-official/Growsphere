@@ -27,7 +27,7 @@ class SettingsScreen extends ConsumerWidget {
             child: SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(l.darkMode, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-              subtitle: Text(l.appearanceDarkSubtitle, style: GoogleFonts.inter(fontSize: 13, color: GrowColors.gray600)),
+              subtitle: Text(l.appearanceDarkSubtitle, style: GoogleFonts.inter(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
               value: storage.themeModePref == ThemeModePref.dark,
               onChanged: (v) async {
                 await storage.setThemeModePref(v ? ThemeModePref.dark : ThemeModePref.light);
@@ -44,7 +44,7 @@ class SettingsScreen extends ConsumerWidget {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(l.pushNotifications, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                  subtitle: Text(l.pushNotificationsSubtitle, style: GoogleFonts.inter(fontSize: 13, color: GrowColors.gray600)),
+                  subtitle: Text(l.pushNotificationsSubtitle, style: GoogleFonts.inter(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                   value: storage.pushNotificationsEnabled,
                   onChanged: (v) async {
                     await storage.setPushNotificationsEnabled(v);
@@ -54,7 +54,7 @@ class SettingsScreen extends ConsumerWidget {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(l.wateringReminders, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                  subtitle: Text(l.wateringRemindersSubtitle, style: GoogleFonts.inter(fontSize: 13, color: GrowColors.gray600)),
+                  subtitle: Text(l.wateringRemindersSubtitle, style: GoogleFonts.inter(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                   value: storage.wateringRemindersEnabled,
                   onChanged: (v) async {
                     await storage.setWateringRemindersEnabled(v);
@@ -77,7 +77,7 @@ class SettingsScreen extends ConsumerWidget {
             child: SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(l.smartControl, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-              subtitle: Text(l.smartControlSubtitle, style: GoogleFonts.inter(fontSize: 13, color: GrowColors.gray600)),
+              subtitle: Text(l.smartControlSubtitle, style: GoogleFonts.inter(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
               value: storage.smartSprinklerControlEnabled,
               onChanged: (v) async {
                 await storage.setSmartSprinklerControlEnabled(v);
@@ -122,7 +122,7 @@ class SettingsScreen extends ConsumerWidget {
           _SectionCard(
             icon: Icons.warning_amber_rounded,
             title: l.dangerZone,
-            tint: const Color(0xFFFFF5F5),
+            tint: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.35),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -205,8 +205,9 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Card(
-      color: tint,
+      color: tint ?? cs.surfaceContainerHighest,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -214,9 +215,12 @@ class _SectionCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, size: 22),
+                Icon(icon, size: 22, color: cs.onSurface),
                 const SizedBox(width: 8),
-                Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16)),
+                Text(
+                  title,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16, color: cs.onSurface),
+                ),
               ],
             ),
             const SizedBox(height: 12),

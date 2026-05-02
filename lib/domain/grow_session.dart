@@ -21,6 +21,9 @@ class GrowSession {
     required this.tasks,
     required this.waterLog,
     required this.streak,
+    required this.bestStreak,
+    required this.lastStreakCreditDayKey,
+    required this.perfectStreakDayLog,
     required this.plantHealth,
     required this.streakByDay,
     required this.earnedBadgeIds,
@@ -42,6 +45,12 @@ class GrowSession {
   final List<GrowTask> tasks;
   final List<DateTime> waterLog;
   int streak;
+  /// Longest consecutive "perfect task days" chain for this grow.
+  int bestStreak;
+  /// `YYYY-MM-DD` of the last calendar day that received a +1 streak credit (all due tasks done).
+  String? lastStreakCreditDayKey;
+  /// Recent days (keys) where every due task was completed; newest last. Capped in session logic.
+  List<String> perfectStreakDayLog;
   int plantHealth;
   Map<String, int> streakByDay;
   List<String> earnedBadgeIds;
@@ -63,6 +72,9 @@ class GrowSession {
         'tasks': tasks.map((e) => e.toJson()).toList(),
         'waterLog': waterLog.map((e) => e.toIso8601String()).toList(),
         'streak': streak,
+        'bestStreak': bestStreak,
+        'lastStreakCreditDayKey': lastStreakCreditDayKey,
+        'perfectStreakDayLog': perfectStreakDayLog,
         'plantHealth': plantHealth,
         'streakByDay': streakByDay,
         'earnedBadgeIds': earnedBadgeIds,
@@ -70,7 +82,6 @@ class GrowSession {
       };
 
   factory GrowSession.fromJson(Map<String, dynamic> json) {
-    return GrowSession(
       plantId: json['plantId'] as String,
       plantName: json['plantName'] as String,
       difficulty: json['difficulty'] as String,
@@ -90,6 +101,13 @@ class GrowSession {
           .map((e) => DateTime.parse(e as String))
           .toList(),
       streak: (json['streak'] as num?)?.toInt() ?? 0,
+      bestStreak: (json['bestStreak'] as num?)?.toInt() ??
+          (json['streak'] as num?)?.toInt() ??
+          0,
+      lastStreakCreditDayKey: json['lastStreakCreditDayKey'] as String?,
+      perfectStreakDayLog: List<String>.from(
+        (json['perfectStreakDayLog'] as List<dynamic>? ?? []).cast<String>(),
+      ),
       plantHealth: (json['plantHealth'] as num?)?.toInt() ?? 80,
       streakByDay: Map<String, int>.from(
         (json['streakByDay'] as Map<dynamic, dynamic>? ?? {}).map((k, v) => MapEntry(k as String, (v as num).toInt())),
@@ -99,11 +117,28 @@ class GrowSession {
     );
   }
 
+  /// At least one task due on [day] and every such task is completed.
+  static bool allDueTasksCompleteForDay(GrowSession s, DateTime day) {
+    final k = DateTime(day.year, day.month, day.day);
+    final due = s.tasks.where((t) => DateTime(t.dueDate.year, t.dueDate.month, t.dueDate.day) == k).toList();
+    if (due.isEmpty) return false;
+    return due.every((t) => t.completed);
+  }
+
+  /// Calendar + task stages: **week 1 = soil prep only**, then **2-week** blocks for
+  /// establishment → feeding → finish. Short crops compress after the soil week.
   static ActivityStage stageForDayIndex(int dayIndex, int totalDays) {
-    final p = dayIndex / totalDays;
-    if (p < 0.15) return ActivityStage.soilPrep;
-    if (p < 0.40) return ActivityStage.seeding;
-    if (p < 0.75) return ActivityStage.fertilizing;
+    final n = totalDays < 1 ? 1 : totalDays;
+    final d = dayIndex.clamp(0, n - 1);
+    if (n <= 10) {
+      if (d < (n * 0.25).ceil()) return ActivityStage.soilPrep;
+      if (d < (n * 0.55).ceil()) return ActivityStage.seeding;
+      if (d < (n * 0.8).ceil()) return ActivityStage.fertilizing;
+      return ActivityStage.harvesting;
+    }
+    if (d < 7) return ActivityStage.soilPrep;
+    if (d < 21) return ActivityStage.seeding;
+    if (d < 35) return ActivityStage.fertilizing;
     return ActivityStage.harvesting;
   }
 
@@ -163,7 +198,7 @@ class GrowSession {
   static String _titleFor(ActivityStage stage, int day, {required bool moisture}) {
     if (moisture) {
       return switch (stage) {
-        ActivityStage.soilPrep => 'Moisten seedbed evenly (day ${day + 1})',
+        ActivityStage.soilPrep => 'Moisten seedbed evenly',
         ActivityStage.seeding => 'Check seedling moisture without disturbing roots',
         ActivityStage.fertilizing => 'Water after light feeding to move nutrients',
         ActivityStage.harvesting => 'Reduce water slightly as crop matures',

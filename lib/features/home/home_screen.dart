@@ -35,6 +35,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _syncFarmDigest(GrowSession session) async {
     final n = ref.read(notificationServiceProvider);
+    final storage = ref.read(growStorageProvider);
     final today = DateTime.now();
     final d = DateTime(today.year, today.month, today.day);
     final lines = session.tasks.where((t) {
@@ -49,6 +50,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     await n.rescheduleTaskDeadlineReminders(plantName: session.plantName, tasks: session.tasks);
     await n.scheduleSensorReadingReminders();
     await n.scheduleEodIncompleteReminder();
+    await n.cancelPendingTaskNudges();
+    if (storage.pushNotificationsEnabled) {
+      await n.reschedulePendingTaskNudges(
+        plantName: session.plantName,
+        tasks: session.tasks,
+        currentStreak: session.streak,
+        bestStreak: session.bestStreak,
+      );
+    }
   }
 
   @override
@@ -68,6 +78,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           await n.cancelTaskDeadlineReminders();
           await n.cancelSensorReadingReminders();
           await n.cancelEodIncompleteReminder();
+          await n.cancelPendingTaskNudges();
         });
       }
     });

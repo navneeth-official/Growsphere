@@ -24,11 +24,19 @@ class FarmStreakCard extends StatelessWidget {
 
   final GrowSession session;
 
+  static const _streakBadgeIds = {
+    'badge_streak_chain_3',
+    'badge_streak_7',
+    'badge_streak_chain_14',
+    'badge_streak_30',
+  };
+
   @override
   Widget build(BuildContext context) {
-    final keys = session.streakByDay.keys.toList()..sort();
-    final recent = keys.reversed.take(7).toList();
-    final best = session.streakByDay.values.fold<int>(0, (a, b) => a > b ? a : b);
+    final cs = Theme.of(context).colorScheme;
+    final muted = cs.onSurfaceVariant;
+    final recent = session.perfectStreakDayLog.reversed.take(7).toList();
+    final streakBadges = session.earnedBadgeIds.where(_streakBadgeIds.contains).toList();
 
     return Card(
       child: Padding(
@@ -48,16 +56,40 @@ class FarmStreakCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'Current streak: ${session.streak} days',
+              'Current streak: ${session.streak} perfect day(s) in a row',
               style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
             Text(
-              'Best recorded this grow: $best · Plant vitality: ${session.plantHealth}%',
-              style: GoogleFonts.inter(fontSize: 13, color: GrowColors.gray600, height: 1.35),
+              'Best for this crop: ${session.bestStreak} · Plant vitality: ${session.plantHealth}%',
+              style: GoogleFonts.inter(fontSize: 13, color: muted, height: 1.35),
             ),
+            const SizedBox(height: 6),
+            Text(
+              'A perfect day means every task due that calendar day is completed. '
+              'Badges unlock at 3, 7, 14, and 30 consecutive perfect days.',
+              style: GoogleFonts.inter(fontSize: 12, color: muted, height: 1.35),
+            ),
+            if (streakBadges.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text('Streak badges earned', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: streakBadges
+                    .map(
+                      (id) => Chip(
+                        label: Text(id.replaceFirst('badge_', '').replaceAll('_', ' '), style: GoogleFonts.inter(fontSize: 11)),
+                        visualDensity: VisualDensity.compact,
+                        backgroundColor: cs.primaryContainer.withValues(alpha: 0.5),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
             const SizedBox(height: 10),
-            Text('Last 7 logged days', style: GoogleFonts.inter(fontSize: 12, color: GrowColors.gray600)),
+            Text('Recent perfect days', style: GoogleFonts.inter(fontSize: 12, color: muted)),
             const SizedBox(height: 6),
             Wrap(
               spacing: 6,
@@ -65,14 +97,13 @@ class FarmStreakCard extends StatelessWidget {
               children: recent.isEmpty
                   ? [
                       Text(
-                        'Complete care on time to build streaks.',
-                        style: GoogleFonts.inter(fontSize: 12, color: GrowColors.gray500),
+                        'Finish every task due today to start your chain.',
+                        style: GoogleFonts.inter(fontSize: 12, color: muted.withValues(alpha: 0.85)),
                       ),
                     ]
                   : recent.map((k) {
-                      final v = session.streakByDay[k] ?? 0;
                       return Chip(
-                        label: Text('$k → $v', style: GoogleFonts.inter(fontSize: 11)),
+                        label: Text(k, style: GoogleFonts.inter(fontSize: 11)),
                         visualDensity: VisualDensity.compact,
                         backgroundColor: GrowColors.green100.withValues(alpha: 0.6),
                       );
@@ -163,6 +194,7 @@ class _TaskScopeSectionState extends ConsumerState<TaskScopeSection> {
     DateTime today,
   ) {
     final list = byDay[today] ?? [];
+    final n = list.length;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -170,14 +202,14 @@ class _TaskScopeSectionState extends ConsumerState<TaskScopeSection> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Today's tasks (${today.month}/${today.day})",
+              n == 0 ? "Today's tasks" : "Today's tasks · $n ${n == 1 ? 'task' : 'tasks'}",
               style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15),
             ),
             const SizedBox(height: 8),
             if (list.isEmpty)
               Text('Nothing scheduled for today.', style: GoogleFonts.inter(color: GrowColors.gray600))
             else
-              ...list.map((t) => _taskTile(context, l, t)),
+              ...list.map((t) => _taskTile(context, t)),
           ],
         ),
       ),
@@ -196,12 +228,18 @@ class _TaskScopeSectionState extends ConsumerState<TaskScopeSection> {
       children: List.generate(weekCount, (wi) {
         final dayStart = start.add(Duration(days: wi * 7));
         final dayEnd = start.add(Duration(days: min(n - 1, wi * 7 + 6)));
+        var weekTasks = 0;
+        for (var di = 0; di < 7; di++) {
+          final off = wi * 7 + di;
+          if (off >= n) break;
+          weekTasks += (byDay[_dOnly(start.add(Duration(days: off)))] ?? []).length;
+        }
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ExpansionTile(
             key: PageStorageKey('w$wi'),
             title: Text(
-              'Week ${wi + 1} · ${dayStart.month}/${dayStart.day}–${dayEnd.month}/${dayEnd.day}',
+              'Week ${wi + 1} · $weekTasks ${weekTasks == 1 ? 'task' : 'tasks'} · ${dayStart.month}/${dayStart.day}–${dayEnd.month}/${dayEnd.day}',
               style: GoogleFonts.inter(fontWeight: FontWeight.w700),
             ),
             initiallyExpanded: _openWeeks.contains(wi),
@@ -220,6 +258,7 @@ class _TaskScopeSectionState extends ConsumerState<TaskScopeSection> {
                 final day = start.add(Duration(days: off));
                 final key = day.toIso8601String().split('T').first;
                 final tasks = byDay[_dOnly(day)] ?? [];
+                final tc = tasks.length;
                 final dOpen = _openDays.contains(key);
                 out.add(
                   Padding(
@@ -227,7 +266,7 @@ class _TaskScopeSectionState extends ConsumerState<TaskScopeSection> {
                     child: ExpansionTile(
                       tilePadding: EdgeInsets.zero,
                       title: Text(
-                        '${day.month}/${day.day} (${tasks.length} tasks)',
+                        '${day.month}/${day.day} · $tc ${tc == 1 ? 'task' : 'tasks'}',
                         style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                       ),
                       initiallyExpanded: dOpen,
@@ -248,7 +287,7 @@ class _TaskScopeSectionState extends ConsumerState<TaskScopeSection> {
                                 ),
                               ),
                             ]
-                          : tasks.map((t) => _taskTile(context, l, t)).toList(),
+                          : tasks.map((t) => _taskTile(context, t)).toList(),
                     ),
                   ),
                 );
@@ -275,17 +314,21 @@ class _TaskScopeSectionState extends ConsumerState<TaskScopeSection> {
     return Column(
       children: sortedKeys.map((mk) {
         final entries = months[mk]!..sort((a, b) => a.key.compareTo(b.key));
+        final monthTasks = entries.fold<int>(0, (s, e) => s + e.value.length);
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ExpansionTile(
-            title: Text(mk, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            title: Text(
+              '$mk · $monthTasks ${monthTasks == 1 ? 'task' : 'tasks'}',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+            ),
             children: entries.map((e) {
               final key = e.key.toIso8601String().split('T').first;
               final dOpen = _openDays.contains(key);
               return ExpansionTile(
                 tilePadding: const EdgeInsets.symmetric(horizontal: 12),
                 title: Text(
-                  '${e.key.month}/${e.key.day} (${e.value.length} tasks)',
+                  '${e.key.month}/${e.key.day} · ${e.value.length} ${e.value.length == 1 ? 'task' : 'tasks'}',
                   style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                 ),
                 initiallyExpanded: dOpen,
@@ -296,7 +339,7 @@ class _TaskScopeSectionState extends ConsumerState<TaskScopeSection> {
                     _openDays.remove(key);
                   }
                 }),
-                children: e.value.map((t) => _taskTile(context, l, t)).toList(),
+                children: e.value.map((t) => _taskTile(context, t)).toList(),
               );
             }).toList(),
           ),
@@ -305,7 +348,7 @@ class _TaskScopeSectionState extends ConsumerState<TaskScopeSection> {
     );
   }
 
-  Widget _taskTile(BuildContext context, AppLocalizations l, GrowTask task) {
+  Widget _taskTile(BuildContext context, GrowTask task) {
     final due = _dOnly(task.dueDate);
     final editable = _isToday(due) && !task.completed;
     return CheckboxListTile(
@@ -317,16 +360,18 @@ class _TaskScopeSectionState extends ConsumerState<TaskScopeSection> {
               final inc = await ref.read(sessionControllerProvider.notifier).completeTask(task.id);
               if (!context.mounted) return;
               setState(() {});
-              if (inc >= 2) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.streaksIncreasedNTimes(inc))));
+              if (inc == 2) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Perfect day — streak +1. Check badges in Streaks.')),
+                );
               } else if (inc == 1) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Task saved — streak updated')));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Task saved')));
               }
             }
           : null,
       title: Text(task.title, style: GoogleFonts.inter(fontSize: 14)),
       subtitle: Text(
-        'Due ${due.month}/${due.day} · ${task.stage.name} · reminder ${task.dueHour}:00',
+        'Due ${due.month}/${due.day} · reminder ${task.dueHour}:00',
         style: GoogleFonts.inter(fontSize: 12, color: GrowColors.gray600),
       ),
     );

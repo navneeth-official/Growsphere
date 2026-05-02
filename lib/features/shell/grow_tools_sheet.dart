@@ -85,8 +85,10 @@ class GrowSubpageScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Scaffold(
-      backgroundColor: GrowColors.gray50,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: GrowColors.green600,
         foregroundColor: Colors.white,
@@ -112,7 +114,7 @@ class GrowSubpageScaffold extends StatelessWidget {
         child: Container(
           width: double.infinity,
           constraints: const BoxConstraints(maxWidth: 448),
-          color: Colors.white,
+          color: cs.surface,
           child: body,
         ),
       ),

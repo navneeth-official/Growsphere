@@ -30,7 +30,10 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       if (widget.autoWater) {
-        await ref.read(sprinklerRepositoryProvider).setOn(true);
+        await ref.read(sprinklerRepositoryProvider).setOn(
+              true,
+              targetWateringSeconds: (_durationMinutes * 60).round(),
+            );
       }
     });
   }
@@ -318,7 +321,10 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                         onPressed: live.valveOpen
                             ? () => _stopWatering(live, plan)
                             : () async {
-                                await ref.read(sprinklerRepositoryProvider).setOn(true);
+                                await ref.read(sprinklerRepositoryProvider).setOn(
+                                      true,
+                                      targetWateringSeconds: (_durationMinutes * 60).round(),
+                                    );
                               },
                         icon: Icon(live.valveOpen ? Icons.stop_circle_outlined : Icons.water_drop, size: 18),
                         label: Text(live.valveOpen ? 'Stop watering' : l.startWatering),
@@ -332,6 +338,10 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                       borderRadius: BorderRadius.circular(99),
                       backgroundColor: GrowColors.gray200,
                       color: qc,
+                      value: () {
+                        final cap = (_durationMinutes * 60).round().clamp(1, 3600);
+                        return (live.secondsWatering / cap).clamp(0.0, 1.0);
+                      }(),
                     ),
                   ],
                   const SizedBox(height: 16),

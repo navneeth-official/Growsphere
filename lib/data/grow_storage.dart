@@ -18,6 +18,7 @@ const _kSmartSprinkler = 'pref_smart_sprinkler_control';
 const _kCustomPlants = 'custom_plants_json';
 const _kFarmPlanMonths = 'farm_plan_start_month_by_plant_json';
 const _kSprinklerWaterStart = 'sprinkler_water_start_iso';
+const _kSprinklerTargetSec = 'sprinkler_target_sec';
 const _kInAppNotifications = 'in_app_notifications_json';
 const _kSprinklerFromCalendar = 'sprinkler_pending_from_calendar';
 const _kFieldTelemetrySnap = 'field_telemetry_snap_json';
@@ -82,13 +83,27 @@ class GrowStorage {
 
   bool get sprinklerOn => box.get(_kSprinkler) == true;
 
-  Future<void> setSprinklerOn(bool on) async {
+  /// When set, auto-stop valve after this many seconds of watering.
+  int? get sprinklerTargetWateringSeconds {
+    final v = box.get(_kSprinklerTargetSec);
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return null;
+  }
+
+  Future<void> setSprinklerOn(bool on, {int? targetWateringSeconds}) async {
     await box.put(_kSprinkler, on);
     await box.put(_kSprinklerAt, DateTime.now().toIso8601String());
     if (on) {
       await box.put(_kSprinklerWaterStart, DateTime.now().toIso8601String());
+      if (targetWateringSeconds != null && targetWateringSeconds > 0) {
+        await box.put(_kSprinklerTargetSec, targetWateringSeconds);
+      } else {
+        await box.delete(_kSprinklerTargetSec);
+      }
     } else {
       await box.delete(_kSprinklerWaterStart);
+      await box.delete(_kSprinklerTargetSec);
     }
   }
 

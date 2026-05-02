@@ -45,9 +45,11 @@ class GrowLayout extends StatelessWidget {
     final l = AppLocalizations.of(context)!;
     final path = GoRouterState.of(context).uri.path;
     final tab = _tabIndex(path);
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: GrowColors.gray50,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -59,7 +61,7 @@ class GrowLayout extends StatelessWidget {
               child: Container(
                 width: double.infinity,
                 constraints: const BoxConstraints(maxWidth: 448),
-                color: Colors.white,
+                color: cs.surface,
                 child: body,
               ),
             ),
@@ -67,12 +69,12 @@ class GrowLayout extends StatelessWidget {
         ],
       ),
       bottomNavigationBar: Material(
-        color: Colors.white,
+        color: cs.surface,
         child: SafeArea(
           top: false,
           child: Container(
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: GrowColors.gray200)),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.35))),
             ),
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
             child: Row(
@@ -125,15 +127,16 @@ class _InnerTitleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Material(
-      color: Colors.white,
+      color: cs.surface,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(4, 4, 8, 8),
         child: Row(
           children: [
             if (context.canPop())
               IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                icon: Icon(Icons.arrow_back, color: cs.onSurface),
                 onPressed: () => context.pop(),
               )
             else
@@ -144,7 +147,7 @@ class _InnerTitleBar extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: Colors.black87,
+                  color: cs.onSurface,
                 ),
               ),
             ),
@@ -264,6 +267,7 @@ class _BottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -274,7 +278,7 @@ class _BottomNavItem extends StatelessWidget {
           children: [
             DecoratedBox(
               decoration: BoxDecoration(
-                color: selected ? Colors.black87 : Colors.transparent,
+                color: selected ? cs.primary : Colors.transparent,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Padding(
@@ -282,7 +286,7 @@ class _BottomNavItem extends StatelessWidget {
                 child: Icon(
                   icon,
                   size: 20,
-                  color: selected ? Colors.white : Colors.black87,
+                  color: selected ? cs.onPrimary : cs.onSurface,
                 ),
               ),
             ),
@@ -292,7 +296,7 @@ class _BottomNavItem extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: selected ? Colors.white : Colors.black87,
+                color: selected ? cs.onPrimary : cs.onSurface.withValues(alpha: 0.85),
               ),
             ),
           ],

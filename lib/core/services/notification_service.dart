@@ -296,6 +296,68 @@ class NotificationService {
     );
   }
 
+  static const _nudgeBaseId = 15400;
+  static const _nudgeCount = 20;
+
+  Future<void> cancelPendingTaskNudges() async {
+    for (var i = 0; i < _nudgeCount; i++) {
+      await _plugin.cancel(_nudgeBaseId + i);
+    }
+  }
+
+  /// Friendly rotating reminders for today's open tasks (~12-14 min apart, capped).
+  Future<void> reschedulePendingTaskNudges({
+    required String plantName,
+    required List<GrowTask> tasks,
+    required int currentStreak,
+    required int bestStreak,
+  }) async {
+    await cancelPendingTaskNudges();
+    final loc = tz.local;
+    final nowLocal = tz.TZDateTime.now(loc);
+    final today = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
+    final pending = tasks.where((t) {
+      if (t.completed) return false;
+      final d = DateTime(t.dueDate.year, t.dueDate.month, t.dueDate.day);
+      return d == today;
+    }).toList();
+    if (pending.isEmpty) return;
+
+    final android = AndroidNotificationDetails(
+      _channelFarm,
+      'Farm calendar',
+      channelDescription: 'Task nudges during the day',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    );
+    const ios = DarwinNotificationDetails(presentAlert: true, presentSound: false);
+    final details = NotificationDetails(android: android, iOS: ios);
+
+    final tips = <String>[
+      if (currentStreak > 0)
+        'Streak: $currentStreak day(s). Badges unlock at 3, 7, 14, and 30 perfect days in a row.',
+      if (bestStreak > currentStreak) 'Best on this crop: $bestStreak — beat your record.',
+      'Complete today\'s care to keep soil probe and canopy readings aligned.',
+    ];
+
+    for (var i = 0; i < _nudgeCount; i++) {
+      final at = nowLocal.add(Duration(minutes: 10 + i * 13));
+      if (at.hour >= 21) break;
+      if (!at.isAfter(nowLocal)) continue;
+      final t = pending[i % pending.length];
+      final tip = tips[i % tips.length];
+      await _plugin.zonedSchedule(
+        _nudgeBaseId + i,
+        'Growsphere — $plantName · still to do',
+        '${t.title}\n$tip',
+        at,
+        details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    }
+  }
+
   tz.TZDateTime _nextInstanceOf(int hour, int minute, tz.Location location) {
     final now = tz.TZDateTime.now(location);
     var scheduled = tz.TZDateTime(location, now.year, now.month, now.day, hour, minute);
