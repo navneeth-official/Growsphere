@@ -15,8 +15,8 @@
     <application
         android:label="Growsphere"
         android:name="${applicationName}"
-        android:icon="@drawable/ic_brand_launcher"
-        android:roundIcon="@drawable/ic_brand_launcher">
+        android:icon="@mipmap/ic_brand_launcher"
+        android:roundIcon="@mipmap/ic_brand_launcher">
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -1,5 +1,5 @@
 # Keeps launcher art in sync from assets/branding/app_icon_source.png
-# - Android: copies PNG into res/drawable/ic_app_launcher_art.png (referenced by ic_brand_launcher.xml)
+# - Android: runs tool/render_round_app_icon.py (mipmap + adaptive + splash colors)
 # - iOS / macOS / Web: runs flutter_launcher_icons (see pubspec.yaml flutter_launcher_icons:)
 #
 # RUN (repo root, Flutter on PATH):
@@ -9,7 +9,6 @@ $ErrorActionPreference = 'Stop'
 $root = Join-Path $PSScriptRoot '..' | Resolve-Path
 $brandDir = Join-Path $root.Path 'assets\branding'
 $src = Join-Path $brandDir 'app_icon_source.png'
-$androidPng = Join-Path $root.Path 'android\app\src\main\res\drawable\ic_app_launcher_art.png'
 
 # Raw Cursor drops use huge filenames (break `git add` on Windows). Remove if present.
 $drive = 'Z'
@@ -25,8 +24,8 @@ if (-not (Test-Path -LiteralPath $src)) {
   Write-Error "Missing $src — add your 1024+ square master there, then re-run."
 }
 
-Copy-Item -LiteralPath $src -Destination $androidPng -Force
-Write-Host "OK Android drawable <= $(Split-Path $src -Leaf)"
+python (Join-Path $PSScriptRoot 'render_round_app_icon.py')
+if ($LASTEXITCODE -ne 0) { throw 'render_round_app_icon.py failed' }
 
 Push-Location $root.Path
 try {
