@@ -10,6 +10,7 @@ import '../../providers/providers.dart';
 import '../../widgets/badge_medallion.dart';
 import '../shell/grow_tools_sheet.dart';
 
+/// Main streaks chart + badge strip. Deeper history / scroll-to-grow lives in [StreakHubScreen] (`/streak-hub`).
 List<MapEntry<String, (String title, String desc)>> _badgeEntriesForSession(GrowSession s) {
   final out = <MapEntry<String, (String, String)>>[];
   for (final m in s.streakMilestoneDays) {

@@ -31,7 +31,7 @@ class StreakHubScreen extends ConsumerStatefulWidget {
 
 class _StreakHubScreenState extends ConsumerState<StreakHubScreen> {
   /// One [GlobalKey] per garden id so [Scrollable.ensureVisible] can target the focused card.
-  /// (`GlobalObjectKey<Object>` is invalid: SDK requires `GlobalObjectKey<T>` where `T` extends `State<StatefulWidget>`.)
+  /// (Object-identity global keys are not used here: the SDK type bound expects a [State] subtype.)
   final Map<String, GlobalKey<State<StatefulWidget>>> _focusScrollKeys = {};
 
   GlobalKey<State<StatefulWidget>> _focusKeyFor(String gardenInstanceId) {
