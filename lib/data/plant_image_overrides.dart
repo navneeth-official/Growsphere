@@ -2,7 +2,8 @@ import '../domain/plant.dart';
 
 /// Bundled crop photos: most ids use the BGR archive under [assets/images/crops/*.jpg].
 /// Hand-held reference photos live under [assets/images/crops/hands/*.png]:
-/// vegetables: [tool/copy_vegetable_hand_crops.ps1]; fruits: [tool/copy_fruit_hand_crops.ps1].
+/// vegetables: [tool/copy_vegetable_hand_crops.ps1]; fruits: [tool/copy_fruit_hand_crops.ps1];
+/// wheat/peas/garlic/onion/potato/carrot/radish/spinach: [tool/copy_rabi_hand_crops.ps1].
 const _kBundledAssetByPlantId = <String, String>{
   'tomato': 'assets/images/crops/hands/tomato.png',
   'chilli': 'assets/images/crops/hands/chilli.png',
@@ -10,20 +11,20 @@ const _kBundledAssetByPlantId = <String, String>{
   'brinjal': 'assets/images/crops/hands/brinjal.png',
   'cucumber': 'assets/images/crops/hands/cucumber.png',
   'beans': 'assets/images/crops/hands/beans.png',
-  'peas': 'assets/images/crops/peas.jpg',
-  'spinach': 'assets/images/crops/spinach.jpg',
+  'peas': 'assets/images/crops/hands/peas.png',
+  'spinach': 'assets/images/crops/hands/spinach.png',
   'lettuce': 'assets/images/crops/hands/lettuce.png',
   'coriander': 'assets/images/crops/coriander.jpg',
   'mint': 'assets/images/crops/mint.jpg',
   'basil': 'assets/images/crops/basil.jpg',
-  'wheat': 'assets/images/crops/wheat.jpg',
+  'wheat': 'assets/images/crops/hands/wheat.png',
   'rice': 'assets/images/crops/rice.jpg',
   'maize': 'assets/images/crops/maize.jpg',
-  'potato': 'assets/images/crops/potato.jpg',
-  'onion': 'assets/images/crops/onion.jpg',
-  'garlic': 'assets/images/crops/garlic.jpg',
-  'carrot': 'assets/images/crops/carrot.jpg',
-  'radish': 'assets/images/crops/radish.jpg',
+  'potato': 'assets/images/crops/hands/potato.png',
+  'onion': 'assets/images/crops/hands/onion.png',
+  'garlic': 'assets/images/crops/hands/garlic.png',
+  'carrot': 'assets/images/crops/hands/carrot.png',
+  'radish': 'assets/images/crops/hands/radish.png',
   'bottle_gourd': 'assets/images/crops/bottle_gourd.jpg',
   'pumpkin': 'assets/images/crops/hands/pumpkin.png',
   'strawberry': 'assets/images/crops/hands/strawberry.png',
