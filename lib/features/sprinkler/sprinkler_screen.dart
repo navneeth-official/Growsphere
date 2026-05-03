@@ -53,7 +53,12 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
       }
       if (!mounted) return;
       if (widget.autoWater) {
+        final gid = ref.read(sessionControllerProvider)?.gardenInstanceId ??
+            widget.gardenInstanceId ??
+            '';
+        if (gid.isEmpty) return;
         await ref.read(sprinklerRepositoryProvider).setOn(
+              gid,
               true,
               targetWateringSeconds: (_durationMinutes * 60).round(),
             );
@@ -84,15 +89,18 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
   Future<void> _stopWatering(SprinklerLiveState live, SprinklerAiPlan plan) async {
     final over = live.quality == SprinklerTimingQuality.over;
     final sec = live.secondsWatering;
-    final fromCal = ref.read(growStorageProvider).pendingSprinklerFromCalendar;
-    await ref.read(sprinklerRepositoryProvider).setOn(false);
+    final gid = ref.read(sessionControllerProvider)?.gardenInstanceId ?? '';
+    if (gid.isEmpty) return;
+    final storage = ref.read(growStorageProvider);
+    final fromCal = storage.pendingSprinklerFromCalendarFor(gid);
+    await ref.read(sprinklerRepositoryProvider).setOn(gid, false);
     final fb = await ref.read(sessionControllerProvider.notifier).finishSprinklerSession(
           overwatered: over,
           secondsWatered: sec,
           idealSecondsMid: plan.idealSecondsMid,
           logCareFromCalendar: fromCal,
         );
-    await ref.read(growStorageProvider).setPendingSprinklerFromCalendar(false);
+    await storage.clearSprinklerCalendarFlagFor(gid);
     if (!mounted) return;
     if (fromCal && fb != null) {
       final l = AppLocalizations.of(context)!;
@@ -145,6 +153,24 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
         children: [
+          if (widget.cropDisplayName != null && widget.cropDisplayName!.trim().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Card(
+                color: cs.primaryContainer.withValues(alpha: 0.4),
+                child: ListTile(
+                  leading: Icon(Icons.spa, color: cs.primary),
+                  title: Text(
+                    'Sprinkler zone: ${widget.cropDisplayName!.trim()}',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: Text(
+                    'Valve and timers apply only to this crop.',
+                    style: GoogleFonts.inter(fontSize: 12, color: cs.onSurfaceVariant),
+                  ),
+                ),
+              ),
+            ),
           Card(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -365,7 +391,10 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
                         onPressed: live.valveOpen
                             ? () => _stopWatering(live, plan)
                             : () async {
+                                final gid = ref.read(sessionControllerProvider)?.gardenInstanceId ?? '';
+                                if (gid.isEmpty) return;
                                 await ref.read(sprinklerRepositoryProvider).setOn(
+                                      gid,
                                       true,
                                       targetWateringSeconds: (_durationMinutes * 60).round(),
                                     );

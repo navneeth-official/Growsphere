@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -37,6 +38,61 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
   SunlightLevel _sun = SunlightLevel.medium;
   late DateTime _farmStartDate;
   bool _busy = false;
+  String? _aiWaterNote;
+  bool _aiWaterLoading = false;
+  Timer? _aiDebounce;
+  String? _lastScheduledAiPlant;
+
+  @override
+  void dispose() {
+    _aiDebounce?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleAiWaterSuggestion(Plant plant) {
+    _aiDebounce?.cancel();
+    _aiDebounce = Timer(const Duration(milliseconds: 450), () => _runAiWaterSuggestion(plant));
+  }
+
+  Future<void> _runAiWaterSuggestion(Plant plant) async {
+    final g = ref.read(geminiGenerativeServiceProvider);
+    if (g == null) {
+      if (mounted) setState(() => _aiWaterNote = null);
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _aiWaterLoading = true;
+      _aiWaterNote = null;
+    });
+    final locName = switch (_loc) {
+      GrowLocationType.indoor => 'indoor',
+      GrowLocationType.balcony => 'balcony',
+      GrowLocationType.terrace => 'terrace',
+    };
+    final sunName = switch (_sun) {
+      SunlightLevel.low => 'low',
+      SunlightLevel.medium => 'medium',
+      SunlightLevel.high => 'high',
+    };
+    try {
+      final text = await g.generateText(
+        systemInstruction:
+            'You advise on watering frequency for one potted/balcony crop. Output 2–3 short sentences only. Plain text. '
+            'Do not invent weather numbers. Base advice only on plant water need, location type, and sunlight level given.',
+        userText:
+            'Plant: ${plant.name}. Catalog watering tag: ${plant.wateringLevel}. Location: $locName. Sunlight: $sunName. '
+            'Give practical water rhythm (how often to check soil, signs of dry vs soggy).',
+      );
+      if (!mounted) return;
+      setState(() {
+        _aiWaterNote = text.trim().isEmpty ? null : text.trim();
+        _aiWaterLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _aiWaterLoading = false);
+    }
+  }
 
   @override
   void initState() {
@@ -89,6 +145,14 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
           sun: _sun,
         );
         final growthMonths = _growthMonthsFromHarvestDays(plant.harvestDurationDays);
+        final pid = plant.id;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          if (_lastScheduledAiPlant != pid) {
+            _lastScheduledAiPlant = pid;
+            _scheduleAiWaterSuggestion(plant);
+          }
+        });
         return GrowSubpageScaffold(
           title: l.gardenSetupTitle,
           body: ListView(
@@ -200,7 +264,10 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
                   ButtonSegment(value: GrowLocationType.terrace, label: Text(l.terrace)),
                 ],
                 selected: {_loc},
-                onSelectionChanged: (s) => setState(() => _loc = s.first),
+                onSelectionChanged: (s) {
+                  setState(() => _loc = s.first);
+                  _scheduleAiWaterSuggestion(plant);
+                },
               ),
               const SizedBox(height: 24),
               Text(l.sunlightLabel, style: Theme.of(context).textTheme.titleSmall),
@@ -212,7 +279,10 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
                   ButtonSegment(value: SunlightLevel.high, label: Text(l.sunHigh)),
                 ],
                 selected: {_sun},
-                onSelectionChanged: (s) => setState(() => _sun = s.first),
+                onSelectionChanged: (s) {
+                  setState(() => _sun = s.first);
+                  _scheduleAiWaterSuggestion(plant);
+                },
               ),
               const SizedBox(height: 24),
               Text(l.wateringRecommendation, style: Theme.of(context).textTheme.titleSmall),
@@ -221,6 +291,32 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
                 child: Padding(
                   padding: const EdgeInsets.all(14),
                   child: Text(rec, style: Theme.of(context).textTheme.bodyMedium),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text('AI watering note', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 6),
+              Card(
+                color: cs.primaryContainer.withValues(alpha: 0.35),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: _aiWaterLoading
+                      ? const Row(
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(child: Text('Getting a tailored suggestion…')),
+                          ],
+                        )
+                      : Text(
+                          _aiWaterNote ??
+                              'Adjust location or sunlight above for an AI suggestion (needs Gemini API key).',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
                 ),
               ),
               const SizedBox(height: 28),

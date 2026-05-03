@@ -242,10 +242,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _onWatered(BuildContext context) async {
     final s = ref.read(sessionControllerProvider);
-    if (s != null && s.farmingLockedOn(DateTime.now())) return;
-    await ref.read(growStorageProvider).setPendingSprinklerFromCalendar(true);
+    if (s == null) return;
+    if (s.farmingLockedOn(DateTime.now())) return;
+    await ref.read(growStorageProvider).setPendingSprinklerFromCalendarFor(s.gardenInstanceId, true);
     if (!context.mounted) return;
-    context.push('/sprinkler?autoWater=1');
+    context.push(
+      '/sprinkler?autoWater=1&instanceId=${Uri.encodeComponent(s.gardenInstanceId)}'
+      '&crop=${Uri.encodeComponent(s.plantName)}',
+    );
   }
 }
 

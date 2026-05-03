@@ -76,6 +76,41 @@ class _GardenWeatherVisualState extends State<GardenWeatherVisual> with SingleTi
               },
             ),
           ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: RadialGradient(
+                    center: const Alignment(-0.35, -0.55),
+                    radius: 1.15,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.14),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.55],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: mood == _WeatherMood.sunny ? 0.06 : 0.14),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
           widget.foreground,
         ],
       ),

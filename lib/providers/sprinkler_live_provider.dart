@@ -33,9 +33,9 @@ class SprinklerLiveState {
   final String hintLine;
   final bool valveOpen;
 
-  factory SprinklerLiveState.seed(GrowStorage storage) {
-    final on = storage.sprinklerOn;
-    final started = storage.sprinklerWaterStartedAt;
+  factory SprinklerLiveState.seed(GrowStorage storage, String gardenInstanceId) {
+    final on = storage.sprinklerOnFor(gardenInstanceId);
+    final started = storage.sprinklerWaterStartedAtFor(gardenInstanceId);
     final sec = on && started != null ? DateTime.now().difference(started).inSeconds : 0;
     return SprinklerLiveState(
       moisture: 44.5 + Random().nextDouble() * 0.4,
@@ -114,38 +114,49 @@ class SprinklerLiveNotifier extends AutoDisposeNotifier<SprinklerLiveState> {
   bool _autoDurationStopSent = false;
   int _lastSnapWriteMs = 0;
   int _lastCompareMs = 0;
+  String _lastGardenId = '';
 
   void setAiPlan(SprinklerAiPlan plan) {
     _plan = plan;
   }
 
+  String _gardenId() => ref.watch(sessionControllerProvider.select((s) => s?.gardenInstanceId ?? ''));
+
   @override
   SprinklerLiveState build() {
+    final gid = _gardenId();
+    if (gid != _lastGardenId) {
+      _lastGardenId = gid;
+      _overAlertSent = false;
+      _autoDurationStopSent = false;
+    }
     final storage = ref.read(growStorageProvider);
     ref.onDispose(() => _timer?.cancel());
     _timer ??= Timer.periodic(const Duration(milliseconds: 700), (_) => _tick());
-    return SprinklerLiveState.seed(storage);
+    return SprinklerLiveState.seed(storage, gid);
   }
 
   void _tick() {
+    final gid = ref.read(sessionControllerProvider)?.gardenInstanceId ?? '';
+    if (gid.isEmpty) return;
     final storage = ref.read(growStorageProvider);
-    if (!storage.sprinklerOn) {
+    if (!storage.sprinklerOnFor(gid)) {
       _overAlertSent = false;
       _autoDurationStopSent = false;
     }
     final next = state.evolve(
       plan: _plan,
-      valveOn: storage.sprinklerOn,
-      waterStart: storage.sprinklerWaterStartedAt,
+      valveOn: storage.sprinklerOnFor(gid),
+      waterStart: storage.sprinklerWaterStartedAtFor(gid),
     );
     state = next;
-    final targetSec = storage.sprinklerTargetWateringSeconds;
-    if (storage.sprinklerOn &&
+    final targetSec = storage.sprinklerTargetWateringSecondsFor(gid);
+    if (storage.sprinklerOnFor(gid) &&
         targetSec != null &&
         next.secondsWatering >= targetSec &&
         !_autoDurationStopSent) {
       _autoDurationStopSent = true;
-      unawaited(_autoStopAtTarget(storage, next));
+      unawaited(_autoStopAtTarget(storage, gid, next));
     }
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     if (nowMs - _lastSnapWriteMs > 45000) {
@@ -169,38 +180,43 @@ class SprinklerLiveNotifier extends AutoDisposeNotifier<SprinklerLiveState> {
         ),
       );
     }
-    if (storage.sprinklerOn &&
+    if (storage.sprinklerOnFor(gid) &&
         next.quality == SprinklerTimingQuality.over &&
         !_overAlertSent) {
       _overAlertSent = true;
       final body = next.hintLine;
-      unawaited(_fireOverwaterAlerts(body));
+      final crop = ref.read(sessionControllerProvider)?.plantName;
+      unawaited(_fireOverwaterAlerts(body, crop));
     }
   }
 
-  Future<void> _fireOverwaterAlerts(String body) async {
+  Future<void> _fireOverwaterAlerts(String body, String? cropName) async {
     final n = ref.read(notificationServiceProvider);
     final s = ref.read(growStorageProvider);
-    await n.showOverwaterAlert(body);
+    await n.showOverwaterAlert(body, cropLabel: cropName);
+    final title = (cropName != null && cropName.isNotEmpty)
+        ? 'Overwatering alert — $cropName'
+        : 'Overwatering alert';
     await s.addInAppNotification(
       id: 'over_${DateTime.now().millisecondsSinceEpoch}',
-      title: 'Overwatering alert',
+      title: title,
       body: body,
     );
     ref.read(inAppNotificationsRevisionProvider.notifier).state++;
   }
 
-  Future<void> _autoStopAtTarget(GrowStorage storage, SprinklerLiveState live) async {
-    await storage.setSprinklerOn(false);
+  Future<void> _autoStopAtTarget(GrowStorage storage, String gardenInstanceId, SprinklerLiveState live) async {
+    await storage.setSprinklerOnFor(gardenInstanceId, false);
     final plan = _plan;
     final over = live.quality == SprinklerTimingQuality.over;
+    final fromCal = storage.pendingSprinklerFromCalendarFor(gardenInstanceId);
     await ref.read(sessionControllerProvider.notifier).finishSprinklerSession(
           overwatered: over,
           secondsWatered: live.secondsWatering,
           idealSecondsMid: plan.idealSecondsMid,
-          logCareFromCalendar: storage.pendingSprinklerFromCalendar,
+          logCareFromCalendar: fromCal,
         );
-    await storage.setPendingSprinklerFromCalendar(false);
+    await storage.clearSprinklerCalendarFlagFor(gardenInstanceId);
   }
 }
 

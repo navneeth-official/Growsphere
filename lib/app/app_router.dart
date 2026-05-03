@@ -28,11 +28,13 @@ import '../features/tools/tools_hub_screen.dart';
 import '../features/weather/weather_screen.dart';
 import '../features/welcome/welcome_screen.dart';
 import '../features/welcome/splash_screen.dart';
+import 'app_navigator.dart';
 import '../providers/providers.dart';
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   final refresh = ref.read(routeRefreshProvider);
   return GoRouter(
+    navigatorKey: growNavigatorKey,
     initialLocation: '/splash',
     refreshListenable: refresh,
     redirect: (context, state) {

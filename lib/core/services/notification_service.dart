@@ -132,7 +132,7 @@ class NotificationService {
   }
 
   /// High-priority local alert (works when app is in background on supported devices).
-  Future<void> showOverwaterAlert(String body) async {
+  Future<void> showOverwaterAlert(String body, {String? cropLabel}) async {
     final id = DateTime.now().millisecondsSinceEpoch.remainder(2000000000);
     final android = AndroidNotificationDetails(
       _channelAlerts,
@@ -146,9 +146,12 @@ class NotificationService {
       presentBadge: true,
       presentSound: true,
     );
+    final title = (cropLabel != null && cropLabel.trim().isNotEmpty)
+        ? 'Sprinkler — $cropLabel — overwatering risk'
+        : 'Sprinkler — overwatering risk';
     await _plugin.show(
       id,
-      'Sprinkler — overwatering risk',
+      title,
       body,
       NotificationDetails(android: android, iOS: ios),
     );

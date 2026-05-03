@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/app_navigator.dart';
 import '../core/farm_plan_bootstrap.dart';
 import '../core/farm_plan_templates.dart';
 import '../core/services/care_timing_service.dart';
@@ -15,6 +19,7 @@ import '../domain/plant.dart';
 import 'base_providers.dart';
 import 'route_refresh.dart';
 import 'sprinkler_live_provider.dart';
+import '../widgets/badge_celebration_dialog.dart';
 
 String _dayKey(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -379,6 +384,18 @@ class SessionController extends Notifier<GrowSession?> {
           );
         } catch (_) {}
       }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = growNavigatorKey.currentContext;
+        if (ctx == null || !ctx.mounted) return;
+        unawaited(
+          showBadgeCelebrationOverlay(
+            ctx,
+            badgeId: id,
+            headline: name,
+            subtitle: journeyMilestone ? desc : '$plantName · $desc',
+          ),
+        );
+      });
     }
     ref.read(inAppNotificationsRevisionProvider.notifier).state++;
   }

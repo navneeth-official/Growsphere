@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import '../core/services/gemini_generative_service.dart';
 import '../core/services/plant_rag_context_service.dart';
+import '../domain/pest_guide_catalog.dart';
 import 'disease_analysis_repository.dart';
 
 /// Multimodal Gemini analysis for plant health, pests, or species ID.
@@ -49,13 +50,16 @@ Task: From the image only — identify the plant or crop if reasonably possible,
 JSON only:''',
         ),
       ImageAnalysisIntent.pestIdentification => (
-          '''You are an expert integrated pest management (IPM) assistant.
-Identify likely pests, life stages, and damage from the image alone. Do not assume the crop matches any app catalog entry.
+          '''You are an expert integrated pest management (IPM) assistant for GrowSphere.
+Identify likely pests, life stages, and damage from the image alone. Never invent insects or symptoms not supported by visible evidence.
+If uncertain, say so in summary and keep recommendations general (monitoring, sanitation, expert ID).
+${PestGuideEntry.referenceBlockForAi()}
 $_jsonKeys''',
           '''REFERENCE_CATALOG (optional pest notes for common crops — use only if consistent with visible evidence):
 $rag
 
-Task: Identify likely pest(s) or damage signatures, explain why, and give non-chemical and chemical control options where appropriate (legal doses: defer to local labels).
+Task: Map findings to one of the guide pests when justified; otherwise use a neutral label like "Unconfirmed pest damage".
+Explain visible cues only, then IPM steps (non-chemical first). Chemical: defer to local labels.
 JSON only:''',
         ),
       ImageAnalysisIntent.plantSpeciesIdentification => (

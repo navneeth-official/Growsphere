@@ -73,11 +73,45 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
         if (!mounted || label == null) return;
         setState(() => _placeLabel = label);
       });
-      final w = await ref.read(weatherRepositoryProvider).fetch(pos.latitude, pos.longitude);
+      WeatherSnapshot? w;
+      Object? fetchErr;
+      try {
+        w = await ref.read(weatherRepositoryProvider).fetch(pos.latitude, pos.longitude);
+      } catch (e) {
+        fetchErr = e;
+        final g = ref.read(geminiGenerativeServiceProvider);
+        if (g != null) {
+          try {
+            final month = DateTime.now().month;
+            final raw = await g.generateText(
+              systemInstruction:
+                  'You are a weather fallback because live HTTP weather APIs failed. Output ONLY one JSON object. '
+                  'Keys: temperatureC (number), humidityPct (number or null), windKmh (number or null), '
+                  'rainChancePct (0-100 or null), wmoWeatherCode (integer 0-99, WMO style). '
+                  'Use conservative seasonal normals for the latitude band and calendar month only. '
+                  'Do not invent storms, heat waves, or snow unless typical for that band in that month. '
+                  'If you cannot estimate, output exactly {"error":"cannot_estimate"}. No markdown, no extra text.',
+              userText:
+                  'Latitude ${pos.latitude} Longitude ${pos.longitude} Month $month. JSON only.',
+            );
+            w = WeatherRepository.tryParseAiEstimateJson(raw, pos.latitude, pos.longitude);
+          } catch (_) {}
+        }
+      }
       if (!mounted) return;
+      if (w == null) {
+        setState(() {
+          _weatherErr = fetchErr != null ? '$fetchErr' : 'unavailable';
+          _weatherLoading = false;
+          _weather = null;
+        });
+        await _loadTip(null);
+        return;
+      }
       setState(() {
         _weather = w;
         _weatherLoading = false;
+        _weatherErr = null;
       });
       await _loadTip(w);
     } catch (e) {
@@ -89,8 +123,6 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
       await _loadTip(null);
     }
   }
-
-  Future<void> _loadTip(WeatherSnapshot? w) async {
     final plants = ref.read(gardenListProvider);
     if (plants.isEmpty) {
       setState(() => _gardenTip = null);
@@ -102,7 +134,8 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
     final wx = w == null
         ? 'unknown'
         : '${w.temperatureC.toStringAsFixed(0)}°C, ${WeatherSnapshot.labelForWmoCode(w.code)}, '
-            'humidity ${w.humidityPct?.toStringAsFixed(0) ?? '?'}%, rain chance ${w.rainChancePct ?? '?'}%';
+            'humidity ${w.humidityPct?.toStringAsFixed(0) ?? '?'}%, rain chance ${w.rainChancePct ?? '?'}%'
+            '${w.source == WeatherDataSource.aiEstimate ? ' (AI estimate — verify when online)' : ''}';
     String tip;
     if (g == null) {
       tip = _fallbackTip(plants, w);
@@ -110,7 +143,9 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
       try {
         tip = await g.generateText(
           systemInstruction:
-              'You are a concise gardening coach. Reply with at most 3 short sentences. Plain text only.',
+              'You are a concise gardening coach. Use ONLY the numbers and condition words in the user message for weather — '
+              'do not invent temperature, rainfall, or humidity. If weather is unknown, give generic season-appropriate advice without fake numbers. '
+              'At most 3 short sentences. Plain text only.',
           userText:
               'Plants in the user garden: $names. Weather today: $wx. Give one practical combined tip (watering / rain / humidity).',
         );
@@ -271,6 +306,17 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
                                             style: GoogleFonts.inter(
                                               fontSize: 13,
                                               color: Colors.white.withValues(alpha: 0.88),
+                                            ),
+                                          ),
+                                          Text(
+                                            switch (_weather!.source) {
+                                              WeatherDataSource.openMeteo => 'Forecast: Open-Meteo',
+                                              WeatherDataSource.openWeatherMap => 'Forecast: OpenWeatherMap',
+                                              WeatherDataSource.aiEstimate => 'Forecast: AI seasonal estimate',
+                                            },
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              color: Colors.white.withValues(alpha: 0.72),
                                             ),
                                           ),
                                         ],
@@ -439,9 +485,10 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
                     },
                     onWatered: () async {
                       await ref.read(sessionControllerProvider.notifier).setActiveGardenPlant(s.gardenInstanceId);
+                      await ref.read(growStorageProvider).setPendingSprinklerFromCalendarFor(s.gardenInstanceId, true);
                       if (context.mounted) {
                         context.push(
-                          '/sprinkler?instanceId=${Uri.encodeComponent(s.gardenInstanceId)}'
+                          '/sprinkler?autoWater=1&instanceId=${Uri.encodeComponent(s.gardenInstanceId)}'
                           '&crop=${Uri.encodeComponent(s.plantName)}',
                         );
                       }

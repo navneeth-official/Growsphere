@@ -14,6 +14,7 @@ const _kTheme = 'theme_mode';
 const _kLocale = 'locale_code';
 const _kSprinkler = 'sprinkler_on';
 const _kSprinklerAt = 'sprinkler_at_iso';
+const _kSprinklerByGarden = 'sprinkler_by_garden_json_v2';
 const _kPushNotif = 'pref_push_notifications';
 const _kWaterRemind = 'pref_watering_reminders';
 const _kSmartSprinkler = 'pref_smart_sprinkler_control';
@@ -37,6 +38,176 @@ class GrowStorage {
   Future<void> init() async {
     await Hive.initFlutter();
     _box = await Hive.openBox<dynamic>(_kBox);
+    _migrateSprinklerV1ToPerGardenIfNeeded();
+  }
+
+  /// One-time: global sprinkler flags → per [gardenInstanceId] map.
+  void _migrateSprinklerV1ToPerGardenIfNeeded() {
+    if (box.get(_kSprinklerByGarden) != null) return;
+    final legacyOn = box.get(_kSprinkler) == true;
+    final legacyStart = box.get(_kSprinklerWaterStart);
+    final legacyCal = box.get(_kSprinklerFromCalendar) == true;
+    if (!legacyOn && legacyStart == null && !legacyCal) {
+      box.put(_kSprinklerByGarden, jsonEncode(<String, dynamic>{}));
+      return;
+    }
+    final list = loadGardenListSync();
+    final gid = activeGardenInstanceId ?? (list.isNotEmpty ? list.first.gardenInstanceId : null);
+    final m = <String, dynamic>{};
+    if (gid != null && gid.isNotEmpty) {
+      m[gid] = <String, dynamic>{
+        'on': legacyOn,
+        if (box.get(_kSprinklerAt) != null) 'at': box.get(_kSprinklerAt),
+        if (legacyStart != null) 'waterStart': legacyStart,
+        if (box.get(_kSprinklerTargetSec) != null) 'targetSec': box.get(_kSprinklerTargetSec),
+        'calendar': legacyCal,
+      };
+    }
+    box.put(_kSprinklerByGarden, jsonEncode(m));
+    box.delete(_kSprinkler);
+    box.delete(_kSprinklerAt);
+    box.delete(_kSprinklerWaterStart);
+    box.delete(_kSprinklerTargetSec);
+    box.delete(_kSprinklerFromCalendar);
+  }
+
+  Map<String, dynamic> _sprinklerMapDecoded() {
+    _migrateSprinklerV1ToPerGardenIfNeeded();
+    final raw = box.get(_kSprinklerByGarden) as String?;
+    if (raw == null || raw.isEmpty) return {};
+    try {
+      return Map<String, dynamic>.from(jsonDecode(raw) as Map);
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> _saveSprinklerMap(Map<String, dynamic> m) async {
+    await box.put(_kSprinklerByGarden, jsonEncode(m));
+  }
+
+  Map<String, dynamic> _entryForGarden(String gardenInstanceId) {
+    final m = _sprinklerMapDecoded();
+    final e = m[gardenInstanceId];
+    if (e is Map) return Map<String, dynamic>.from(e);
+    return {};
+  }
+
+  /// Per-crop valve + timer state (each [gardenInstanceId] has its own sprinkler session).
+  bool sprinklerOnFor(String gardenInstanceId) {
+    if (gardenInstanceId.isEmpty) return false;
+    return _entryForGarden(gardenInstanceId)['on'] == true;
+  }
+
+  int? sprinklerTargetWateringSecondsFor(String gardenInstanceId) {
+    if (gardenInstanceId.isEmpty) return null;
+    final v = _entryForGarden(gardenInstanceId)['targetSec'];
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return null;
+  }
+
+  DateTime? sprinklerWaterStartedAtFor(String gardenInstanceId) {
+    if (gardenInstanceId.isEmpty) return null;
+    final s = _entryForGarden(gardenInstanceId)['waterStart'] as String?;
+    if (s == null) return null;
+    try {
+      return DateTime.parse(s);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool pendingSprinklerFromCalendarFor(String gardenInstanceId) {
+    if (gardenInstanceId.isEmpty) return false;
+    return _entryForGarden(gardenInstanceId)['calendar'] == true;
+  }
+
+  Future<void> setPendingSprinklerFromCalendarFor(String gardenInstanceId, bool v) async {
+    if (gardenInstanceId.isEmpty) return;
+    final all = _sprinklerMapDecoded();
+    final next = Map<String, dynamic>.from(all[gardenInstanceId] as Map? ?? {});
+    if (v) {
+      next['calendar'] = true;
+    } else {
+      next.remove('calendar');
+    }
+    all[gardenInstanceId] = next;
+    await _saveSprinklerMap(all);
+  }
+
+  Future<void> setSprinklerOnFor(
+    String gardenInstanceId,
+    bool on, {
+    int? targetWateringSeconds,
+  }) async {
+    if (gardenInstanceId.isEmpty) return;
+    final all = _sprinklerMapDecoded();
+    var next = Map<String, dynamic>.from(all[gardenInstanceId] as Map? ?? {});
+    next['on'] = on;
+    next['at'] = DateTime.now().toIso8601String();
+    if (on) {
+      next['waterStart'] = DateTime.now().toIso8601String();
+      if (targetWateringSeconds != null && targetWateringSeconds > 0) {
+        next['targetSec'] = targetWateringSeconds;
+      } else {
+        next.remove('targetSec');
+      }
+    } else {
+      next.remove('waterStart');
+      next.remove('targetSec');
+    }
+    all[gardenInstanceId] = next;
+    await _saveSprinklerMap(all);
+  }
+
+  Future<void> clearSprinklerCalendarFlagFor(String gardenInstanceId) async {
+    if (gardenInstanceId.isEmpty) return;
+    final all = _sprinklerMapDecoded();
+    final next = Map<String, dynamic>.from(all[gardenInstanceId] as Map? ?? {});
+    next.remove('calendar');
+    if (next.isEmpty) {
+      all.remove(gardenInstanceId);
+    } else {
+      all[gardenInstanceId] = next;
+    }
+    await _saveSprinklerMap(all);
+  }
+
+  DateTime? lastSprinklerAtFor(String gardenInstanceId) {
+    if (gardenInstanceId.isEmpty) return null;
+    final s = _entryForGarden(gardenInstanceId)['at'] as String?;
+    if (s == null) return null;
+    try {
+      return DateTime.parse(s);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Legacy: active garden’s valve (for one-off reads). Prefer [sprinklerOnFor].
+  bool get sprinklerOn => sprinklerOnFor(activeGardenInstanceId ?? '');
+
+  /// Legacy: active garden (avoid for multi-crop flows).
+  int? get sprinklerTargetWateringSeconds =>
+      sprinklerTargetWateringSecondsFor(activeGardenInstanceId ?? '');
+
+  Future<void> setSprinklerOn(bool on, {int? targetWateringSeconds}) async {
+    final id = activeGardenInstanceId;
+    if (id == null || id.isEmpty) return;
+    await setSprinklerOnFor(id, on, targetWateringSeconds: targetWateringSeconds);
+  }
+
+  DateTime? get sprinklerWaterStartedAt =>
+      sprinklerWaterStartedAtFor(activeGardenInstanceId ?? '');
+
+  bool get pendingSprinklerFromCalendar =>
+      pendingSprinklerFromCalendarFor(activeGardenInstanceId ?? '');
+
+  Future<void> setPendingSprinklerFromCalendar(bool v) async {
+    final id = activeGardenInstanceId;
+    if (id == null || id.isEmpty) return;
+    await setPendingSprinklerFromCalendarFor(id, v);
   }
 
   Box<dynamic> get box {
@@ -147,41 +318,7 @@ class GrowStorage {
 
   Future<void> setLocaleCode(String code) => box.put(_kLocale, code);
 
-  bool get sprinklerOn => box.get(_kSprinkler) == true;
-
-  /// When set, auto-stop valve after this many seconds of watering.
-  int? get sprinklerTargetWateringSeconds {
-    final v = box.get(_kSprinklerTargetSec);
-    if (v is int) return v;
-    if (v is num) return v.toInt();
-    return null;
-  }
-
-  Future<void> setSprinklerOn(bool on, {int? targetWateringSeconds}) async {
-    await box.put(_kSprinkler, on);
-    await box.put(_kSprinklerAt, DateTime.now().toIso8601String());
-    if (on) {
-      await box.put(_kSprinklerWaterStart, DateTime.now().toIso8601String());
-      if (targetWateringSeconds != null && targetWateringSeconds > 0) {
-        await box.put(_kSprinklerTargetSec, targetWateringSeconds);
-      } else {
-        await box.delete(_kSprinklerTargetSec);
-      }
-    } else {
-      await box.delete(_kSprinklerWaterStart);
-      await box.delete(_kSprinklerTargetSec);
-    }
-  }
-
-  DateTime? get sprinklerWaterStartedAt {
-    final s = box.get(_kSprinklerWaterStart) as String?;
-    if (s == null) return null;
-    try {
-      return DateTime.parse(s);
-    } catch (_) {
-      return null;
-    }
-  }
+  DateTime? get lastSprinklerAt => lastSprinklerAtFor(activeGardenInstanceId ?? '');
 
   List<Map<String, dynamic>> loadInAppNotifications() {
     final raw = box.get(_kInAppNotifications) as String?;
@@ -230,26 +367,6 @@ class GrowStorage {
 
   int unreadNotificationCount() {
     return loadInAppNotifications().where((m) => m['read'] != true).length;
-  }
-
-  bool get pendingSprinklerFromCalendar => box.get(_kSprinklerFromCalendar) == true;
-
-  Future<void> setPendingSprinklerFromCalendar(bool v) async {
-    if (v) {
-      await box.put(_kSprinklerFromCalendar, true);
-    } else {
-      await box.delete(_kSprinklerFromCalendar);
-    }
-  }
-
-  DateTime? get lastSprinklerAt {
-    final s = box.get(_kSprinklerAt) as String?;
-    if (s == null) return null;
-    try {
-      return DateTime.parse(s);
-    } catch (_) {
-      return null;
-    }
   }
 
   bool get pushNotificationsEnabled => box.get(_kPushNotif) != false;
