@@ -19,63 +19,20 @@ List<(String id, String title, String desc)> _milestoneBadges(GrowSession s) {
   ];
 }
 
-class StreakHubScreen extends ConsumerStatefulWidget {
+class StreakHubScreen extends ConsumerWidget {
   const StreakHubScreen({super.key, this.focusGardenInstanceId});
 
-  /// When set (e.g. from profile badge tap), scrolls to this grow’s archive/active card.
+  /// When set (e.g. from profile), matching past seasons are sorted first; active grow card uses highlight styling.
+  /// (No [GlobalKey] / auto-scroll — avoids SDK key-type issues on some Flutter versions.)
   final String? focusGardenInstanceId;
 
   @override
-  ConsumerState<StreakHubScreen> createState() => _StreakHubScreenState();
-}
-
-class _StreakHubScreenState extends ConsumerState<StreakHubScreen> {
-  /// One [GlobalKey] per garden id so [Scrollable.ensureVisible] can target the focused card.
-  /// (Object-identity global keys are not used here: the SDK type bound expects a [State] subtype.)
-  final Map<String, GlobalKey<State<StatefulWidget>>> _focusScrollKeys = {};
-
-  GlobalKey<State<StatefulWidget>> _focusKeyFor(String gardenInstanceId) {
-    return _focusScrollKeys.putIfAbsent(
-      gardenInstanceId,
-      () => GlobalKey<State<StatefulWidget>>(),
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToFocus());
-  }
-
-  @override
-  void didUpdateWidget(covariant StreakHubScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.focusGardenInstanceId != widget.focusGardenInstanceId) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToFocus());
-    }
-  }
-
-  void _scrollToFocus() {
-    final id = widget.focusGardenInstanceId?.trim();
-    if (id == null || id.isEmpty) return;
-    final ctx = _focusKeyFor(id).currentContext;
-    if (ctx != null && mounted) {
-      Scrollable.ensureVisible(
-        ctx,
-        alignment: 0.12,
-        duration: const Duration(milliseconds: 340),
-        curve: Curves.easeOutCubic,
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(localDataRevisionProvider);
     final cs = Theme.of(context).colorScheme;
     final session = ref.watch(sessionControllerProvider);
     final rawArchives = ref.watch(growStorageProvider).loadGrowArchives();
-    final fid = widget.focusGardenInstanceId?.trim();
+    final fid = focusGardenInstanceId?.trim();
 
     final archives = List<Map<String, dynamic>>.from(rawArchives);
     if (fid != null && fid.isNotEmpty) {
@@ -120,13 +77,7 @@ class _StreakHubScreenState extends ConsumerState<StreakHubScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            if (fid != null && fid.isNotEmpty && session.gardenInstanceId == fid)
-              KeyedSubtree(
-                key: _focusKeyFor(fid),
-                child: _sessionSummaryCard(context, session, highlight: highlightActive),
-              )
-            else
-              _sessionSummaryCard(context, session, highlight: highlightActive),
+            _sessionSummaryCard(context, session, highlight: highlightActive),
             const SizedBox(height: 12),
             Text(
               'Milestone targets',
@@ -201,13 +152,7 @@ class _StreakHubScreenState extends ConsumerState<StreakHubScreen> {
               } catch (_) {
                 return const SizedBox.shrink();
               }
-              final sk = fid != null &&
-                      fid.isNotEmpty &&
-                      s.gardenInstanceId == fid &&
-                      session?.gardenInstanceId != fid
-                  ? _focusKeyFor(fid)
-                  : null;
-              return _ArchiveCard(raw: raw, scrollKey: sk);
+              return _ArchiveCard(raw: raw);
             }),
         ],
       ),
@@ -342,10 +287,9 @@ class _StreakHubScreenState extends ConsumerState<StreakHubScreen> {
 }
 
 class _ArchiveCard extends StatelessWidget {
-  const _ArchiveCard({required this.raw, this.scrollKey});
+  const _ArchiveCard({required this.raw});
 
   final Map<String, dynamic> raw;
-  final Key? scrollKey;
 
   @override
   Widget build(BuildContext context) {
@@ -357,7 +301,7 @@ class _ArchiveCard extends StatelessWidget {
       return const SizedBox.shrink();
     }
     final at = raw['archivedAt']?.toString() ?? '';
-    final body = Padding(
+    return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Card(
         elevation: 0,
@@ -430,9 +374,5 @@ class _ArchiveCard extends StatelessWidget {
         ),
       ),
     );
-    if (scrollKey != null) {
-      return KeyedSubtree(key: scrollKey, child: body);
-    }
-    return body;
   }
 }
