@@ -24,8 +24,26 @@ You output only JSON (no markdown fences): one JSON object with two keys:
 2) "series": array of up to 4 objects {"crop": string, "points": [{"label": string, "price": number}, ...]}
    — for each of the top few crops in "rows", include 7 chronological points (labels like "-6d","-5d",...,"0d")
    showing a believable smooth trend ending at the row's pricePerKg at "0d". Values must stay positive.
+Optional key "insight" (string): one short sentence on regional demand or seasonality (plain text).
 
 Use catalog typicalPricePerKg only as a weak prior. Mention in your head that figures are estimates.
+''';
+
+  static const _systemCropSearch = '''
+You output only JSON (no markdown fences): one object with keys:
+- "rows": array of 1–3 objects {"crop": string, "pricePerKg": number, "unit": "INR/kg", "changePercent": number}
+  for TARGET_CROP in USER_REGION (mandi-style indicative INR/kg). If the crop has common grades, you may
+  include a second row for a related grade or local synonym.
+- "series": array with one object {"crop": string, "points": [{"label": string, "price": number}, ...]}
+  with 7 points "-6d" … "0d" ending at the primary row's pricePerKg.
+- "insight": string — 2–3 sentences: typical seasonality, quality cues, or what buyers watch in this region.
+Figures are estimates, not exchange quotes.
+''';
+
+  static const _systemSuggest = '''
+Return only JSON (no markdown): {"suggestions": ["name1", "name2", ...]} — 6 crop or commodity names
+that a farmer might search for in India given the partial text PARTIAL. Include close spellings and
+related crops; not limited to any fixed database.
 ''';
 
   @override
@@ -50,6 +68,52 @@ Return the JSON object only.
     return _parseBoard(raw, now);
   }
 
+  @override
+  Future<MarketBoardResult> searchCropPrices({
+    required String cropQuery,
+    required String regionLabel,
+    String? geoHint,
+  }) async {
+    final rag = await _rag.buildContextBlock();
+    final now = DateTime.now();
+    final geo = geoHint == null || geoHint.isEmpty ? '(not provided)' : geoHint;
+    final crop = cropQuery.trim().isEmpty ? 'unspecified crop' : cropQuery.trim();
+    final prompt = '''
+TARGET_CROP: $crop
+USER_REGION (primary): $regionLabel
+DEVICE_GEO_HINT: $geo
+
+RAG_CONTEXT (weak priors only):
+$rag
+
+Timestamp: ${now.toIso8601String()}
+Return the JSON object only.
+''';
+    final raw = await _gemini.generateText(systemInstruction: _systemCropSearch, userText: prompt);
+    return _parseBoard(raw, now);
+  }
+
+  @override
+  Future<List<String>> suggestCropNames(String partial) async {
+    final t = partial.trim();
+    if (t.length < 2) return [];
+    final raw = await _gemini.generateText(
+      systemInstruction: _systemSuggest.replaceAll('PARTIAL', t),
+      userText: 'Partial search: $t',
+    );
+    try {
+      final start = raw.indexOf('{');
+      final end = raw.lastIndexOf('}');
+      if (start < 0 || end <= start) return [];
+      final root = jsonDecode(raw.substring(start, end + 1)) as Map<String, dynamic>;
+      final s = root['suggestions'];
+      if (s is! List) return [];
+      return s.map((e) => '$e').where((e) => e.trim().isNotEmpty).take(8).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   MarketBoardResult _parseBoard(String raw, DateTime updated) {
     try {
       final start = raw.indexOf('{');
@@ -58,6 +122,7 @@ Return the JSON object only.
         return _fallback(updated);
       }
       final root = jsonDecode(raw.substring(start, end + 1)) as Map<String, dynamic>;
+      final insight = root['insight'] is String ? root['insight'] as String : null;
       final rowsJson = root['rows'];
       final seriesJson = root['series'];
       final rows = <MarketRow>[];
@@ -98,9 +163,9 @@ Return the JSON object only.
       }
       if (rows.isEmpty) return _fallback(updated);
       if (series.isEmpty) {
-        return MarketBoardResult(rows: rows, series: _syntheticSeries(rows));
+        return MarketBoardResult(rows: rows, series: _syntheticSeries(rows), insightNote: insight);
       }
-      return MarketBoardResult(rows: rows, series: series.take(4).toList());
+      return MarketBoardResult(rows: rows, series: series.take(4).toList(), insightNote: insight);
     } catch (_) {
       return _fallback(updated);
     }
@@ -122,6 +187,6 @@ Return the JSON object only.
       MarketRow(crop: 'Tomato', pricePerKg: 48, unit: 'INR/kg', updated: updated, changePercent: 0.5),
       MarketRow(crop: 'Onion', pricePerKg: 32, unit: 'INR/kg', updated: updated, changePercent: -0.2),
     ];
-    return MarketBoardResult(rows: rows, series: _syntheticSeries(rows));
+    return MarketBoardResult(rows: rows, series: _syntheticSeries(rows), insightNote: null);
   }
 }

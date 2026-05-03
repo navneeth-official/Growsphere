@@ -177,18 +177,6 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
                   ),
                 ),
               ),
-              Material(
-                color: cs.primaryContainer,
-                borderRadius: BorderRadius.circular(20),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () => context.go('/plants'),
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Icon(Icons.add, color: cs.onPrimaryContainer, size: 22),
-                  ),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 14),

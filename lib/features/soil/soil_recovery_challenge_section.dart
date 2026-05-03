@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/synthetic_tool_plants.dart';
 import '../../core/theme/grow_colors.dart';
 import '../../providers/providers.dart';
 
@@ -24,7 +25,7 @@ class _RecoveryPlant {
   final String moreInfo;
 }
 
-/// Expandable soil-recovery crops + “Add challenge to calendar” (shared by soil lab + soil guidance).
+/// Expandable soil-recovery crops + “Add to Garden” (shared by soil lab + soil guidance).
 class SoilRecoveryChallengeSection extends ConsumerStatefulWidget {
   const SoilRecoveryChallengeSection({super.key});
 
@@ -91,25 +92,21 @@ class _SoilRecoveryChallengeSectionState extends ConsumerState<SoilRecoveryChall
 
   int? _expandedIndex;
 
-  Future<void> _addChallenge(BuildContext context, String plantName) async {
-    final ok = await ref.read(sessionControllerProvider.notifier).appendCustomCalendarTask(
-          title: 'Soil recovery: $plantName green manure',
-          daysFromToday: 3,
-        );
-    if (!context.mounted) return;
-    if (!ok) {
+  Future<void> _addToGarden(BuildContext context, String plantName) async {
+    try {
+      final plant = syntheticLegumeCoverPlant(plantName);
+      await ref.read(sessionControllerProvider.notifier).addToolPlantToGarden(plant);
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Start a grow from My Garden first so tasks can be added to your calendar.'),
-        ),
+        SnackBar(content: Text('Added $plantName to My Garden as a cover crop.')),
       );
       context.go('/garden');
-      return;
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not add to garden: $e')),
+      );
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Added soil recovery challenge for $plantName.')),
-    );
-    context.go('/home');
   }
 
   @override
@@ -124,7 +121,7 @@ class _SoilRecoveryChallengeSectionState extends ConsumerState<SoilRecoveryChall
         ),
         const SizedBox(height: 8),
         Text(
-          'Tap a plant to expand soil benefits, rotation tips, and add a reminder to your grow calendar.',
+          'Tap a plant to expand soil benefits and rotation tips, then add the legume to My Garden.',
           style: GoogleFonts.inter(fontSize: 13, color: GrowColors.gray600, height: 1.35),
         ),
         const SizedBox(height: 12),
@@ -191,9 +188,9 @@ class _SoilRecoveryChallengeSectionState extends ConsumerState<SoilRecoveryChall
                           Text(p.moreInfo, style: GoogleFonts.inter(fontSize: 13, height: 1.45)),
                           const SizedBox(height: 14),
                           FilledButton.icon(
-                            onPressed: () => _addChallenge(context, p.name),
-                            icon: const Icon(Icons.event_available_outlined),
-                            label: const Text('Add challenge to calendar'),
+                            onPressed: () => _addToGarden(context, p.name),
+                            icon: const Icon(Icons.yard_outlined),
+                            label: const Text('Add to Garden'),
                           ),
                         ],
                       ),

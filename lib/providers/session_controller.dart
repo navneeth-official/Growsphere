@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/farm_plan_bootstrap.dart';
 import '../core/services/care_timing_service.dart';
 import '../data/grow_storage.dart';
 import '../domain/activity_stage.dart';
@@ -86,6 +87,30 @@ class SessionController extends Notifier<GrowSession?> {
       farmPlanJson: farmPlan.serialize(),
     );
     await _persist();
+  }
+
+  /// Saves [plant] as a custom catalog entry, builds a template or AI farm plan, and appends a new garden grow.
+  Future<void> addToolPlantToGarden(Plant plant) async {
+    await _storage.addCustomPlant(plant);
+    final month = DateTime.now().month;
+    await _storage.setFarmPlanStartMonth(plant.id, month);
+    final repo = ref.read(geminiFarmPlanRepositoryProvider);
+    final raw = await FarmPlanBootstrap.loadOrBuild(
+      repo: repo,
+      plant: plant,
+      farmStartMonth1To12: month,
+      location: GrowLocationType.balcony,
+      sunlight: SunlightLevel.medium,
+    );
+    final start = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final plan = FarmPlanBootstrap.anchorToGrowStart(raw, start);
+    await addGardenPlant(
+      plant: plant,
+      location: GrowLocationType.balcony,
+      sunlight: SunlightLevel.medium,
+      farmPlanStartMonth1To12: month,
+      farmPlan: plan,
+    );
   }
 
   /// Legacy name — same as [addGardenPlant].

@@ -8,8 +8,6 @@ import '../../core/theme/grow_colors.dart';
 import '../../providers/providers.dart';
 import 'grow_tools_sheet.dart';
 
-const _kTabRoots = {'/garden', '/plants', '/home', '/tools', '/add-crop', '/research'};
-
 /// V1 shell: green GROWSPHERE bar, optional white inner title row, max-width body, black-pill bottom nav.
 class GrowLayout extends StatelessWidget {
   const GrowLayout({
@@ -27,17 +25,17 @@ class GrowLayout extends StatelessWidget {
   int? _tabIndex(String path) {
     if (path == '/garden' || path.startsWith('/garden?')) return 0;
     if (path == '/plants' || path.startsWith('/plants?')) return 1;
-    if (path == '/home') return 2;
     if (path == '/tools' ||
         path == '/chat' ||
         path == '/disease' ||
         path == '/soil' ||
         path == '/pest' ||
-        path == '/market') {
-      return 3;
+        path == '/market' ||
+        path == '/microgreens-guide' ||
+        path == '/soil-guidance') {
+      return 2;
     }
-    if (path == '/add-crop') return 4;
-    if (path == '/research' || path.startsWith('/research/')) return 5;
+    if (path == '/research' || path.startsWith('/research/')) return 3;
     return null;
   }
 
@@ -94,27 +92,15 @@ class GrowLayout extends StatelessWidget {
                   onTap: () => context.go('/plants'),
                 ),
                 _BottomNavItem(
-                  icon: Icons.calendar_today_outlined,
-                  label: l.tabCalendar,
-                  selected: tab == 2,
-                  onTap: () => context.go('/home'),
-                ),
-                _BottomNavItem(
-                  icon: Icons.chat_bubble_outline,
+                  icon: Icons.build_circle_outlined,
                   label: l.tabTools,
-                  selected: tab == 3,
+                  selected: tab == 2,
                   onTap: () => context.go('/tools'),
-                ),
-                _BottomNavItem(
-                  icon: Icons.add,
-                  label: l.tabAddPlant,
-                  selected: tab == 4,
-                  onTap: () => context.go('/add-crop'),
                 ),
                 _BottomNavItem(
                   icon: Icons.search,
                   label: l.tabResearch,
-                  selected: tab == 5,
+                  selected: tab == 3,
                   onTap: () => context.go('/research'),
                 ),
               ],

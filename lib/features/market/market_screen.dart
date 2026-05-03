@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:fl_chart/fl_chart.dart';
@@ -36,14 +37,43 @@ class MarketScreen extends ConsumerStatefulWidget {
 }
 
 class _MarketScreenState extends ConsumerState<MarketScreen> {
+  final _cropSearchCtrl = TextEditingController();
+  final _customRegionCtrl = TextEditingController();
+  Timer? _suggestDebounce;
+  List<String> _suggestions = [];
+  bool _searchActive = false;
+
   String _regionChoice = _kRegions.first;
   String _resolvedRegion = 'India';
   String? _geoHint;
   Future<MarketBoardResult>? _future;
 
   @override
+  void dispose() {
+    _suggestDebounce?.cancel();
+    _cropSearchCtrl.dispose();
+    _customRegionCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onCropQueryChanged() {
+    _suggestDebounce?.cancel();
+    _suggestDebounce = Timer(const Duration(milliseconds: 400), () async {
+      final q = _cropSearchCtrl.text.trim();
+      if (q.length < 2) {
+        if (mounted) setState(() => _suggestions = []);
+        return;
+      }
+      final list = await ref.read(marketRepositoryProvider).suggestCropNames(q);
+      if (!mounted) return;
+      setState(() => _suggestions = list);
+    });
+  }
+
+  @override
   void initState() {
     super.initState();
+    _cropSearchCtrl.addListener(_onCropQueryChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
   }
 
@@ -114,16 +144,35 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   }
 
   String get _effectiveRegion {
+    final custom = _customRegionCtrl.text.trim();
+    if (custom.isNotEmpty) return custom;
     if (_regionChoice == _kRegions.first) return _resolvedRegion;
     return _regionChoice;
   }
 
-  void _reload() {
+  void _reload({bool? asCropSearch}) {
+    final q = _cropSearchCtrl.text.trim();
+    if (asCropSearch == true && q.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Type a crop name to search prices.')),
+      );
+      return;
+    }
+    final doSearch = (asCropSearch ?? _searchActive) && q.isNotEmpty;
     setState(() {
-      _future = ref.read(marketRepositoryProvider).fetchBoard(
-            regionLabel: _effectiveRegion,
-            geoHint: _geoHint,
-          );
+      if (asCropSearch != null) {
+        _searchActive = asCropSearch == true && q.isNotEmpty;
+      }
+      _future = doSearch
+          ? ref.read(marketRepositoryProvider).searchCropPrices(
+                cropQuery: q,
+                regionLabel: _effectiveRegion,
+                geoHint: _geoHint,
+              )
+          : ref.read(marketRepositoryProvider).fetchBoard(
+                regionLabel: _effectiveRegion,
+                geoHint: _geoHint,
+              );
     });
   }
 
@@ -156,6 +205,28 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               'AI-generated indicative wholesale-style prices (INR/kg) — not a live exchange feed.',
               style: GoogleFonts.inter(fontSize: 12, color: cs.onSurfaceVariant, height: 1.35),
             ),
+            if (board.insightNote != null && board.insightNote!.trim().isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Card(
+                color: cs.surfaceContainerHighest,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.lightbulb_outline, color: cs.primary, size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          board.insightNote!,
+                          style: GoogleFonts.inter(fontSize: 13, height: 1.45, color: cs.onSurface),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             Center(
               child: Text(
@@ -231,6 +302,95 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   children: [
                     Row(
                       children: [
+                        Icon(Icons.search, color: cs.primary, size: 26),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Search any crop',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 16, color: cs.onSurface),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Prices and tips are model estimates for the selected region — crops need not be in the app catalog.',
+                      style: GoogleFonts.inter(fontSize: 12, height: 1.35, color: cs.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _cropSearchCtrl,
+                            textInputAction: TextInputAction.search,
+                            decoration: const InputDecoration(
+                              hintText: 'e.g. drumstick, quinoa, lavender',
+                              isDense: true,
+                              border: OutlineInputBorder(),
+                            ),
+                            onSubmitted: (_) => _reload(asCropSearch: true),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: () => _reload(asCropSearch: true),
+                          child: const Icon(Icons.trending_up, size: 22),
+                        ),
+                      ],
+                    ),
+                    if (_suggestions.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Text('Suggestions', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          for (final s in _suggestions)
+                            ActionChip(
+                              label: Text(s, style: GoogleFonts.inter(fontSize: 13)),
+                              onPressed: () {
+                                _cropSearchCtrl.text = s;
+                                _reload(asCropSearch: true);
+                              },
+                            ),
+                        ],
+                      ),
+                    ],
+                    if (_searchActive) ...[
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _searchActive = false;
+                            _cropSearchCtrl.clear();
+                            _suggestions = [];
+                          });
+                          _reload(asCropSearch: false);
+                        },
+                        child: const Text('Show default regional board'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: cs.outline.withValues(alpha: 0.35)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
                         Icon(Icons.pin_drop_outlined, color: cs.primary, size: 26),
                         const SizedBox(width: 10),
                         Expanded(
@@ -270,6 +430,28 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                         _reload();
                       },
                     ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _customRegionCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Custom region (optional)',
+                        hintText: 'Any city, state, or country',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      onSubmitted: (_) => _reload(),
+                    ),
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: () {
+                          setState(() {});
+                          _reload();
+                        },
+                        child: const Text('Apply custom region to next fetch'),
+                      ),
+                    ),
                     if (_geoHint != null) ...[
                       const SizedBox(height: 6),
                       Text(
@@ -281,7 +463,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: FilledButton.tonalIcon(
-                        onPressed: _reload,
+                        onPressed: () => _reload(),
                         icon: const Icon(Icons.refresh, size: 18),
                         label: const Text('Refresh prices'),
                       ),

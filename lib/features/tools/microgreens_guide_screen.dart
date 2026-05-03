@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:growspehere_v1/l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/synthetic_tool_plants.dart';
 import '../../core/theme/grow_colors.dart';
+import '../../providers/providers.dart';
 import '../shell/grow_tools_sheet.dart';
 
 class _Variety {
@@ -28,14 +31,14 @@ class _Variety {
   final int totalInvestmentInr;
 }
 
-class MicrogreensGuideScreen extends StatefulWidget {
+class MicrogreensGuideScreen extends ConsumerStatefulWidget {
   const MicrogreensGuideScreen({super.key});
 
   @override
-  State<MicrogreensGuideScreen> createState() => _MicrogreensGuideScreenState();
+  ConsumerState<MicrogreensGuideScreen> createState() => _MicrogreensGuideScreenState();
 }
 
-class _MicrogreensGuideScreenState extends State<MicrogreensGuideScreen> {
+class _MicrogreensGuideScreenState extends ConsumerState<MicrogreensGuideScreen> {
   static const _varieties = <_Variety>[
     _Variety(
       emoji: '🥦',
@@ -316,9 +319,13 @@ class _MicrogreensGuideScreenState extends State<MicrogreensGuideScreen> {
                     children: [
                       const Text('🛠️', style: TextStyle(fontSize: 18)),
                       const SizedBox(width: 8),
-                      Text(
-                        'Basic setup cost',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 15, color: cs.onSurface),
+                      Expanded(
+                        child: Text(
+                          _selectedIndex == null
+                              ? 'Basic setup cost'
+                              : 'Basic setup cost — ${_varieties[_selectedIndex!].name}',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 15, color: cs.onSurface),
+                        ),
                       ),
                     ],
                   ),
@@ -327,7 +334,10 @@ class _MicrogreensGuideScreenState extends State<MicrogreensGuideScreen> {
                   const SizedBox(height: 6),
                   _costRow('Coconut coir or jute mat', '₹100–150'),
                   const SizedBox(height: 6),
-                  _costRow('Seeds (per variety)', '₹50–100'),
+                  if (_selectedIndex != null)
+                    _costRow('Seeds (${_varieties[_selectedIndex!].name})', _varieties[_selectedIndex!].price)
+                  else
+                    _costRow('Seeds (per variety)', '₹50–100'),
                   const SizedBox(height: 6),
                   _costRow('Spray bottle', '₹50–100'),
                   const SizedBox(height: 6),
@@ -340,18 +350,20 @@ class _MicrogreensGuideScreenState extends State<MicrogreensGuideScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Total investment: ₹900–2250 (one-time)',
+                          _selectedIndex == null
+                              ? 'Total investment: ₹900–2250 (one-time, generic kit)'
+                              : 'Total investment (typical for ${_varieties[_selectedIndex!].name}): '
+                                  'about ₹${_varieties[_selectedIndex!].basicSetupInr} setup + '
+                                  '≈ ₹${_varieties[_selectedIndex!].totalInvestmentInr} with starter seed runs.',
                           style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 14, height: 1.35),
                         ),
                       ),
                     ],
                   ),
                   if (_selectedIndex != null) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Text(
-                      'For ${_varieties[_selectedIndex!].name}, app reference totals are about '
-                      '₹${_varieties[_selectedIndex!].basicSetupInr} (setup) and '
-                      '₹${_varieties[_selectedIndex!].totalInvestmentInr} (with a few seed runs).',
+                      'Figures are indicative — compare with your local shop before you add this crop to My Garden.',
                       style: GoogleFonts.inter(fontSize: 12, height: 1.4, color: GrowColors.gray700),
                     ),
                   ],
@@ -361,14 +373,32 @@ class _MicrogreensGuideScreenState extends State<MicrogreensGuideScreen> {
           ),
           const SizedBox(height: 14),
           FilledButton.icon(
-            onPressed: () {
+            onPressed: () async {
               if (_selectedIndex == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Expand a variety and tap Select this microgreen first.')),
                 );
                 return;
               }
-              context.push('/add-crop');
+              final v = _varieties[_selectedIndex!];
+              final plant = syntheticMicrogreenPlant(
+                name: v.name,
+                retailLabel: v.price,
+                harvestDurationDays: parseMicrogreenHarvestDays(v.duration),
+              );
+              try {
+                await ref.read(sessionControllerProvider.notifier).addToolPlantToGarden(plant);
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Added ${v.name} to My Garden.')),
+                );
+                context.go('/garden');
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Could not add to garden: $e')),
+                );
+              }
             },
             icon: const Icon(Icons.spa_outlined),
             label: const Text('Add Microgreens to My Garden'),
