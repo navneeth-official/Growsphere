@@ -421,12 +421,9 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
                     },
                     onWatered: () async {
                       await ref.read(sessionControllerProvider.notifier).setActiveGardenPlant(s.gardenInstanceId);
-                      await ref.read(growStorageProvider).setPendingSprinklerFromCalendarFor(s.gardenInstanceId, true);
                       if (!context.mounted) return;
-                      final already = ref.read(growStorageProvider).sprinklerOnFor(s.gardenInstanceId);
-                      final auto = already ? '0' : '1';
                       context.push(
-                        '/sprinkler?autoWater=$auto&instanceId=${Uri.encodeComponent(s.gardenInstanceId)}'
+                        '/sprinkler?instanceId=${Uri.encodeComponent(s.gardenInstanceId)}'
                         '&crop=${Uri.encodeComponent(s.plantName)}',
                       );
                     },

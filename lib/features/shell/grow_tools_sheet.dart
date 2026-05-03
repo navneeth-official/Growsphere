@@ -66,10 +66,12 @@ Widget _tile(BuildContext context, IconData icon, String label, VoidCallback onT
 }
 
 PreferredSizeWidget growToolsAppBar(BuildContext context, String title) {
+  final dark = Theme.of(context).brightness == Brightness.dark;
   return AppBar(
-    backgroundColor: GrowColors.green600,
+    backgroundColor: dark ? const Color(0xFF0D1F14) : GrowColors.green600,
     foregroundColor: Colors.white,
-    elevation: 2,
+    surfaceTintColor: Colors.transparent,
+    elevation: 0,
     title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
     leading: context.canPop()
         ? IconButton(
@@ -104,12 +106,14 @@ class GrowSubpageScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final dark = theme.brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: GrowColors.green600,
+        backgroundColor: dark ? const Color(0xFF0D1F14) : GrowColors.green600,
         foregroundColor: Colors.white,
-        elevation: 2,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
         leading: context.canPop()
             ? IconButton(

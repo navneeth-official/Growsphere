@@ -24,6 +24,8 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: GrowColors.green600,
         foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
         titleTextStyle: GoogleFonts.inter(
           fontSize: 18,
           fontWeight: FontWeight.w600,
@@ -96,12 +98,14 @@ class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: const Color(0xFF0D1F14),
       appBarTheme: AppBarTheme(
-        backgroundColor: const Color(0xFF143822),
-        foregroundColor: scheme.onSurface,
+        backgroundColor: const Color(0xFF0D1F14),
+        foregroundColor: const Color(0xFFE8F5E9),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
         titleTextStyle: GoogleFonts.inter(
           fontSize: 18,
           fontWeight: FontWeight.w600,
-          color: scheme.onSurface,
+          color: const Color(0xFFE8F5E9),
         ),
       ),
       textTheme: textTheme,

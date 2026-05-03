@@ -148,104 +148,106 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final loc = MaterialLocalizations.of(context);
     final valveOn = storage.sprinklerOnFor(session.gardenInstanceId);
     return GrowLayout(
-      body: Stack(
-        clipBehavior: Clip.none,
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          ListView(
-            controller: _scroll,
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-            children: [
-              Text(
-                session.plantName,
-                style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700),
-              ),
-              if (locked) ...[
-                const SizedBox(height: 12),
-                Card(
-                  color: cs.primaryContainer.withValues(alpha: 0.55),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        Icon(Icons.event_available, color: cs.primary),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Scheduled grow — tasks unlock on ${loc.formatFullDate(session.effectiveFarmingStart)}.',
-                            style: GoogleFonts.inter(fontSize: 13, height: 1.35, color: cs.onSurface),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Text(
-                'Tap the floating plan button (lower right) for the full monthly farm plan chart.',
-                style: GoogleFonts.inter(fontSize: 12, height: 1.35, color: cs.onSurfaceVariant),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(title: l.plantHealth, value: '${session.plantHealth}%'),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(title: 'Grow cycle', value: '${session.harvestDurationDays} days'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(l.wateringRecommendation, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              Text(
-                session.wateringRecommendationText,
-                style: GoogleFonts.inter(color: cs.onSurfaceVariant),
-              ),
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: locked ? null : () => _onWatered(context),
-                icon: Icon(valveOn ? Icons.hourglass_top : Icons.water_drop),
-                label: Text(valveOn ? '${l.watering}…' : l.iWatered),
-              ),
-              const SizedBox(height: 24),
-              ActivityFarmingStagesSection(
-                session: session,
-                startMonth1To12: startM,
-                selectedSlotIndex: _selectedFarmPlanSlot < 0 ? null : _selectedFarmPlanSlot,
-                onSlotChanged: (i) => setState(() => _selectedFarmPlanSlot = i),
-                sectionAnchorKey: _stagesSectionKey,
-              ),
-              const SizedBox(height: 24),
-              FarmStreakCard(session: session),
-              const SizedBox(height: 16),
-              Text(l.activityCalendar, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              ActivityMonthCalendar(session: session),
-            ],
-          ),
-          Positioned(
-            right: 12,
-            bottom: 72,
-            child: SafeArea(
-              child: Material(
-                elevation: 8,
-                shadowColor: Colors.black45,
-                borderRadius: BorderRadius.circular(16),
-                color: cs.primary,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () => context.push('/farm-plan-chart'),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Icon(Icons.calendar_view_month, color: cs.onPrimary, size: 26),
-                  ),
-                ),
+          Material(
+            color: cs.primary,
+            elevation: 4,
+            shadowColor: Colors.black38,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => context.push('/farm-plan-chart'),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Icon(Icons.calendar_view_month, color: cs.onPrimary, size: 24),
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            heroTag: 'home_add_plant',
+            onPressed: () => context.go('/plants'),
+            tooltip: l.addNewPlant,
+            child: const Icon(Icons.add),
+          ),
+        ],
+      ),
+      body: ListView(
+        controller: _scroll,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+        children: [
+          Text(
+            session.plantName,
+            style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700),
+          ),
+          if (locked) ...[
+            const SizedBox(height: 12),
+            Card(
+              color: cs.primaryContainer.withValues(alpha: 0.55),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Icon(Icons.event_available, color: cs.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Scheduled grow — tasks unlock on ${loc.formatFullDate(session.effectiveFarmingStart)}.',
+                        style: GoogleFonts.inter(fontSize: 13, height: 1.35, color: cs.onSurface),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            'The calendar button above Add opens the full monthly farm plan.',
+            style: GoogleFonts.inter(fontSize: 12, height: 1.35, color: cs.onSurfaceVariant),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _StatCard(title: l.plantHealth, value: '${session.plantHealth}%'),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _StatCard(title: 'Grow cycle', value: '${session.harvestDurationDays} days'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(l.wateringRecommendation, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Text(
+            session.wateringRecommendationText,
+            style: GoogleFonts.inter(color: cs.onSurfaceVariant),
+          ),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: locked ? null : () => _onWatered(context),
+            icon: Icon(valveOn ? Icons.hourglass_top : Icons.water_drop),
+            label: Text(valveOn ? '${l.watering}…' : l.iWatered),
+          ),
+          const SizedBox(height: 24),
+          ActivityFarmingStagesSection(
+            session: session,
+            startMonth1To12: startM,
+            selectedSlotIndex: _selectedFarmPlanSlot < 0 ? null : _selectedFarmPlanSlot,
+            onSlotChanged: (i) => setState(() => _selectedFarmPlanSlot = i),
+            sectionAnchorKey: _stagesSectionKey,
+          ),
+          const SizedBox(height: 24),
+          FarmStreakCard(session: session),
+          const SizedBox(height: 16),
+          Text(l.activityCalendar, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          ActivityMonthCalendar(session: session),
         ],
       ),
     );
@@ -255,12 +257,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final s = ref.read(sessionControllerProvider);
     if (s == null) return;
     if (s.farmingLockedOn(DateTime.now())) return;
-    await ref.read(growStorageProvider).setPendingSprinklerFromCalendarFor(s.gardenInstanceId, true);
     if (!context.mounted) return;
-    final already = ref.read(growStorageProvider).sprinklerOnFor(s.gardenInstanceId);
-    final auto = already ? '0' : '1';
     context.push(
-      '/sprinkler?autoWater=$auto&instanceId=${Uri.encodeComponent(s.gardenInstanceId)}'
+      '/sprinkler?instanceId=${Uri.encodeComponent(s.gardenInstanceId)}'
       '&crop=${Uri.encodeComponent(s.plantName)}',
     );
   }

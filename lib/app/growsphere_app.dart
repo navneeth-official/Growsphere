@@ -8,6 +8,7 @@ import '../data/grow_storage.dart';
 import '../providers/base_providers.dart';
 import 'app_router.dart';
 import 'app_resume_scope.dart';
+import '../widgets/watering_haptic_listener.dart';
 
 class GrowsphereApp extends ConsumerWidget {
   const GrowsphereApp({super.key});
@@ -38,6 +39,15 @@ class GrowsphereApp extends ConsumerWidget {
         ],
         supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: router,
+        builder: (context, child) {
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              if (child != null) child,
+              const WateringHapticListener(),
+            ],
+          );
+        },
       ),
     );
   }

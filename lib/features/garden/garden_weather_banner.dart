@@ -69,16 +69,20 @@ class _GardenWeatherHeroBannerState extends State<GardenWeatherHeroBanner> with 
           SizedBox(
             width: 108,
             height: 100,
-            child: AnimatedBuilder(
-              animation: _anim,
-              builder: (_, __) {
-                return CustomPaint(
-                  painter: _ClimateHeroPainter(
-                    t: _anim.value,
-                    code: w.code,
-                  ),
-                );
-              },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              clipBehavior: Clip.antiAlias,
+              child: AnimatedBuilder(
+                animation: _anim,
+                builder: (_, __) {
+                  return CustomPaint(
+                    painter: _ClimateHeroPainter(
+                      t: _anim.value,
+                      code: w.code,
+                    ),
+                  );
+                },
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -239,16 +243,8 @@ class _ClimateHeroPainter extends CustomPainter {
     final cx = size.width * 0.52;
     final cy = size.height * 0.48;
 
-    // Soft vignette
-    final bg = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          const Color(0xFF2A2D36).withValues(alpha: 0.9),
-          const Color(0xFF14151A),
-        ],
-        stops: const [0.0, 1.0],
-      ).createShader(Rect.fromCircle(center: Offset(cx, cy), radius: size.shortestSide * 0.9));
-    canvas.drawRect(Offset.zero & size, bg);
+    const panel = Color(0xFF1E1F24);
+    canvas.drawRect(Offset.zero & size, Paint()..color = panel);
 
     final sunAngle = t * math.pi * 2 * 0.12;
 
