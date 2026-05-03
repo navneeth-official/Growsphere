@@ -39,5 +39,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/data/plants.json
+    # Only files directly under crops/ are bundled; hands/ must be listed separately (Flutter 3+).
     - assets/images/crops/
+    - assets/images/crops/hands/
     - assets/images/categories/
