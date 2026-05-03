@@ -30,6 +30,13 @@ class StreakHubScreen extends ConsumerStatefulWidget {
 }
 
 class _StreakHubScreenState extends ConsumerState<StreakHubScreen> {
+  /// One [GlobalKey] per garden id so [Scrollable.ensureVisible] can target the focused card.
+  final Map<String, GlobalKey<State<StatefulWidget>>> _focusScrollKeys = {};
+
+  GlobalKey<State<StatefulWidget>> _focusKeyFor(String gardenInstanceId) {
+    return _focusScrollKeys.putIfAbsent(gardenInstanceId, GlobalKey<State<StatefulWidget>>.new);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -47,7 +54,7 @@ class _StreakHubScreenState extends ConsumerState<StreakHubScreen> {
   void _scrollToFocus() {
     final id = widget.focusGardenInstanceId?.trim();
     if (id == null || id.isEmpty) return;
-    final ctx = GlobalObjectKey<Object>('grow_$id').currentContext;
+    final ctx = _focusKeyFor(id).currentContext;
     if (ctx != null && mounted) {
       Scrollable.ensureVisible(
         ctx,
@@ -111,7 +118,7 @@ class _StreakHubScreenState extends ConsumerState<StreakHubScreen> {
             const SizedBox(height: 8),
             if (fid != null && fid.isNotEmpty && session.gardenInstanceId == fid)
               KeyedSubtree(
-                key: GlobalObjectKey<Object>('grow_$fid'),
+                key: _focusKeyFor(fid),
                 child: _sessionSummaryCard(context, session, highlight: highlightActive),
               )
             else
@@ -194,7 +201,7 @@ class _StreakHubScreenState extends ConsumerState<StreakHubScreen> {
                       fid.isNotEmpty &&
                       s.gardenInstanceId == fid &&
                       session?.gardenInstanceId != fid
-                  ? GlobalObjectKey<Object>('grow_$fid')
+                  ? _focusKeyFor(fid)
                   : null;
               return _ArchiveCard(raw: raw, scrollKey: sk);
             }),
