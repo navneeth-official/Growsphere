@@ -1,9 +1,10 @@
 import '../domain/plant.dart';
 
 /// Bundled crop photos: most ids use the BGR archive under [assets/images/crops/*.jpg].
-/// Hand-held reference photos live under [assets/images/crops/hands/*.png]:
-/// vegetables: [tool/copy_vegetable_hand_crops.ps1]; fruits: [tool/copy_fruit_hand_crops.ps1];
-/// wheat/peas/garlic/onion/potato/carrot/radish/spinach: [tool/copy_rabi_hand_crops.ps1].
+/// Hand-held reference photos: named files [assets/images/crops/hands/<plant_id>.png]
+/// (see [bundled_hand_crop_asset_paths.dart]).
+/// Refresh images: run [tool/sync_hand_crop_images.ps1] after placing files in Downloads\Growsphere_hand_crops
+/// (see script header). Legacy: copy_vegetable_hand_crops / copy_fruit_hand_crops / copy_rabi_hand_crops.
 const _kBundledAssetByPlantId = <String, String>{
   'tomato': 'assets/images/crops/hands/tomato.png',
   'chilli': 'assets/images/crops/hands/chilli.png',

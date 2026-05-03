@@ -45,3 +45,7 @@ app.*.map.json
 # Local reference APK extract (dev only)
 tool/_ref_apk_extract/
 tool/app.zip
+
+# Hand-crop sync: never commit temp or raw Cursor filenames (path length breaks `git add` on Windows)
+assets/images/crops/hands/_staging_robocopy/
+assets/images/crops/hands/c__Users_*.png
