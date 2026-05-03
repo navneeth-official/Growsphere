@@ -50,172 +50,202 @@ class _GardenWeatherHeroBannerState extends State<GardenWeatherHeroBanner> with 
     final dayStr = MaterialLocalizations.of(context).formatFullDate(DateTime.now());
     final condition = WeatherSnapshot.labelForWmoCode(w.code);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1F24),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 108,
-            height: 100,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              clipBehavior: Clip.antiAlias,
-              child: AnimatedBuilder(
-                animation: _anim,
-                builder: (_, __) {
-                  return CustomPaint(
-                    painter: _ClimateHeroPainter(
-                      t: _anim.value,
-                      code: w.code,
-                    ),
-                  );
-                },
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 340;
+        final artW = narrow ? 86.0 : 108.0;
+        final artH = narrow ? 86.0 : 100.0;
+        final hPad = narrow ? 10.0 : 14.0;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1F24),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Precipitation chance',
-                  style: GoogleFonts.inter(fontSize: 11, color: Colors.white54, height: 1.2),
-                ),
-                Text(
-                  '${w.rainChancePct ?? '—'}%',
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.92)),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Humidity',
-                  style: GoogleFonts.inter(fontSize: 11, color: Colors.white54, height: 1.2),
-                ),
-                Text(
-                  '${w.humidityPct?.round() ?? '—'}%',
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.92)),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Wind',
-                  style: GoogleFonts.inter(fontSize: 11, color: Colors.white54, height: 1.2),
-                ),
-                Text(
-                  '${w.windKmh.round()} km/h',
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.92)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Weather',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white.withValues(alpha: 0.96),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '$dayStr · $timeStr',
-                textAlign: TextAlign.right,
-                style: GoogleFonts.inter(fontSize: 12, color: Colors.white60, height: 1.25),
-              ),
-              const SizedBox(height: 4),
               SizedBox(
-                width: 132,
-                child: Text(
-                  widget.placeLine,
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(fontSize: 10, color: Colors.white38),
-                ),
-              ),
-              const SizedBox(height: 4),
-              SizedBox(
-                width: 120,
-                child: Text(
-                  condition,
-                  textAlign: TextAlign.right,
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.white60, height: 1.25),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _tempDisplay.round().toString(),
-                    style: GoogleFonts.inter(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w800,
-                      height: 1,
-                      color: Colors.white,
-                    ),
+                width: artW,
+                height: artH,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  clipBehavior: Clip.antiAlias,
+                  child: AnimatedBuilder(
+                    animation: _anim,
+                    builder: (_, __) {
+                      return CustomPaint(
+                        painter: _ClimateHeroPainter(
+                          t: _anim.value,
+                          code: w.code,
+                        ),
+                      );
+                    },
                   ),
-                  const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: () => setState(() => _celsius = !_celsius),
-                    child: RichText(
-                      text: TextSpan(
-                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
+              SizedBox(width: narrow ? 8 : 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Precipitation chance',
+                      maxLines: 2,
+                      softWrap: true,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(fontSize: 11, color: Colors.white54, height: 1.2),
+                    ),
+                    Text(
+                      '${w.rainChancePct ?? '—'}%',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.92)),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Humidity',
+                      maxLines: 2,
+                      softWrap: true,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(fontSize: 11, color: Colors.white54, height: 1.2),
+                    ),
+                    Text(
+                      '${w.humidityPct?.round() ?? '—'}%',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.92)),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Wind',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(fontSize: 11, color: Colors.white54, height: 1.2),
+                    ),
+                    Text(
+                      '${w.windKmh.round()} km/h',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.92)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Weather',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: GoogleFonts.inter(
+                        fontSize: narrow ? 14 : 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white.withValues(alpha: 0.96),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$dayStr · $timeStr',
+                      textAlign: TextAlign.right,
+                      maxLines: 2,
+                      softWrap: true,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(fontSize: narrow ? 10 : 12, color: Colors.white60, height: 1.25),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.placeLine,
+                      textAlign: TextAlign.right,
+                      maxLines: 2,
+                      softWrap: true,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(fontSize: 10, color: Colors.white38),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      condition,
+                      textAlign: TextAlign.right,
+                      maxLines: 2,
+                      softWrap: true,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(fontSize: 12, color: Colors.white60, height: 1.25),
+                    ),
+                    const SizedBox(height: 10),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          TextSpan(
-                            text: '°C',
-                            style: TextStyle(
-                              color: _celsius ? Colors.white : Colors.white38,
+                          Text(
+                            _tempDisplay.round().toString(),
+                            style: GoogleFonts.inter(
+                              fontSize: narrow ? 28 : 34,
+                              fontWeight: FontWeight.w800,
+                              height: 1,
+                              color: Colors.white,
                             ),
                           ),
-                          TextSpan(
-                            text: ' | ',
-                            style: TextStyle(color: Colors.white38),
-                          ),
-                          TextSpan(
-                            text: '°F',
-                            style: TextStyle(
-                              color: !_celsius ? Colors.white : Colors.white38,
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () => setState(() => _celsius = !_celsius),
+                            child: RichText(
+                              text: TextSpan(
+                                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+                                children: [
+                                  TextSpan(
+                                    text: '°C',
+                                    style: TextStyle(
+                                      color: _celsius ? Colors.white : Colors.white38,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: ' | ',
+                                    style: TextStyle(color: Colors.white38),
+                                  ),
+                                  TextSpan(
+                                    text: '°F',
+                                    style: TextStyle(
+                                      color: !_celsius ? Colors.white : Colors.white38,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-              if (widget.sourceLine != null && widget.sourceLine!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: 132,
-                  child: Text(
-                    widget.sourceLine!,
-                    textAlign: TextAlign.right,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(fontSize: 9, color: Colors.white38, height: 1.2),
-                  ),
+                    if (widget.sourceLine != null && widget.sourceLine!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        widget.sourceLine!,
+                        textAlign: TextAlign.right,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(fontSize: 9, color: Colors.white38, height: 1.2),
+                      ),
+                    ],
+                  ],
                 ),
-              ],
+              ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
