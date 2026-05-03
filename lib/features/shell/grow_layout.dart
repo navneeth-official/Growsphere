@@ -225,19 +225,9 @@ class _GreenHeader extends ConsumerWidget {
                 onPressed: () => context.push('/notifications'),
               ),
               IconButton(
-                icon: const Icon(Icons.mode_edit_outlined, color: Colors.white, size: 22),
-                tooltip: l.settings,
-                onPressed: () => context.push('/settings'),
-              ),
-              IconButton(
                 icon: const Icon(Icons.grid_3x3, color: Colors.white, size: 22),
                 tooltip: 'More',
                 onPressed: () => showGrowToolsSheet(context),
-              ),
-              IconButton(
-                icon: const Icon(Icons.water_drop, color: Colors.white, size: 22),
-                tooltip: l.sprinkler,
-                onPressed: () => context.push('/sprinkler'),
               ),
               IconButton(
                 icon: const Icon(Icons.settings, color: Colors.white, size: 22),

@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../core/theme/grow_colors.dart';
 import '../../core/widgets/ai_progress_dialog.dart';
 import '../../data/disease_analysis_repository.dart';
 import '../../providers/providers.dart';
@@ -27,6 +26,7 @@ class _PestScreenState extends ConsumerState<PestScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     return GrowToolShell(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -55,6 +55,7 @@ class _PestScreenState extends ConsumerState<PestScreen> {
                   child: ListView(
                     children: [
                       _pestRow(
+                        cs,
                         'Aphids',
                         'Treatment: Neem oil spray',
                         'High',
@@ -63,6 +64,7 @@ class _PestScreenState extends ConsumerState<PestScreen> {
                       ),
                       const SizedBox(height: 10),
                       _pestRow(
+                        cs,
                         'Spider Mites',
                         'Treatment: Increase humidity',
                         'Medium',
@@ -71,11 +73,12 @@ class _PestScreenState extends ConsumerState<PestScreen> {
                       ),
                       const SizedBox(height: 10),
                       _pestRow(
+                        cs,
                         'Whiteflies',
                         'Treatment: Yellow sticky traps',
                         'Low',
-                        GrowColors.gray200,
-                        GrowColors.gray700,
+                        cs.surfaceContainerHighest,
+                        cs.onSurface,
                       ),
                       if (_pestPhoto != null) ...[
                         const SizedBox(height: 12),
@@ -88,14 +91,17 @@ class _PestScreenState extends ConsumerState<PestScreen> {
                         const SizedBox(height: 12),
                         Text(
                           _lastReport!.label,
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15),
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: cs.onSurface),
                         ),
                         Text(
                           _lastReport!.severity,
-                          style: GoogleFonts.inter(color: GrowColors.gray600, fontSize: 13),
+                          style: GoogleFonts.inter(color: cs.onSurfaceVariant, fontSize: 13),
                         ),
                         const SizedBox(height: 6),
-                        Text(_lastReport!.advice, style: GoogleFonts.inter(fontSize: 13, height: 1.35)),
+                        Text(
+                          _lastReport!.advice,
+                          style: GoogleFonts.inter(fontSize: 13, height: 1.35, color: cs.onSurface),
+                        ),
                       ],
                     ],
                   ),
@@ -157,11 +163,18 @@ class _PestScreenState extends ConsumerState<PestScreen> {
     );
   }
 
-  Widget _pestRow(String title, String subtitle, String badge, Color badgeBg, Color badgeFg) {
+  Widget _pestRow(
+    ColorScheme cs,
+    String title,
+    String subtitle,
+    String badge,
+    Color badgeBg,
+    Color badgeFg,
+  ) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        border: Border.all(color: GrowColors.gray200),
+        border: Border.all(color: cs.outline.withValues(alpha: 0.35)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -171,9 +184,15 @@ class _PestScreenState extends ConsumerState<PestScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15)),
+                Text(
+                  title,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: cs.onSurface),
+                ),
                 const SizedBox(height: 4),
-                Text(subtitle, style: GoogleFonts.inter(fontSize: 13, color: GrowColors.gray600)),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(fontSize: 13, color: cs.onSurfaceVariant),
+                ),
               ],
             ),
           ),

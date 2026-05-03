@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/farm_plan_bootstrap.dart';
+import '../core/farm_plan_templates.dart';
 import '../core/services/care_timing_service.dart';
 import '../data/grow_storage.dart';
 import '../domain/activity_stage.dart';
@@ -94,14 +96,23 @@ class SessionController extends Notifier<GrowSession?> {
     await _storage.addCustomPlant(plant);
     final month = DateTime.now().month;
     await _storage.setFarmPlanStartMonth(plant.id, month);
-    final repo = ref.read(geminiFarmPlanRepositoryProvider);
-    final raw = await FarmPlanBootstrap.loadOrBuild(
-      repo: repo,
-      plant: plant,
-      farmStartMonth1To12: month,
-      location: GrowLocationType.balcony,
-      sunlight: SunlightLevel.medium,
-    );
+    FarmPlanAiResult raw;
+    try {
+      final repo = ref.read(geminiFarmPlanRepositoryProvider);
+      raw = await FarmPlanBootstrap.loadOrBuild(
+        repo: repo,
+        plant: plant,
+        farmStartMonth1To12: month,
+        location: GrowLocationType.balcony,
+        sunlight: SunlightLevel.medium,
+      );
+    } catch (e, st) {
+      debugPrint('addToolPlantToGarden plan build failed, using template: $e\n$st');
+      raw = FarmPlanTemplates.buildFallback(
+        harvestDays: plant.harvestDurationDays.clamp(1, 999),
+        plantName: plant.name,
+      );
+    }
     final start = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
     final plan = FarmPlanBootstrap.anchorToGrowStart(raw, start);
     await addGardenPlant(

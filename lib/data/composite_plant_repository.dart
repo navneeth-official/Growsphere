@@ -1,5 +1,6 @@
 import '../domain/plant.dart';
 import 'grow_storage.dart';
+import 'plant_image_overrides.dart';
 import 'plant_repository.dart';
 
 /// Asset catalog plus user-added plants from [GrowStorage].
@@ -13,7 +14,7 @@ class CompositePlantRepository implements PlantRepository {
   Future<List<Plant>> loadAll() async {
     final asset = await _asset.loadAll();
     final custom = _storage.loadCustomPlants();
-    return [...asset, ...custom];
+    return [...asset.map(plantWithStableImage), ...custom];
   }
 
   @override
@@ -22,6 +23,7 @@ class CompositePlantRepository implements PlantRepository {
     for (final p in custom) {
       if (p.id == id) return p;
     }
-    return _asset.byId(id);
+    final a = await _asset.byId(id);
+    return a == null ? null : plantWithStableImage(a);
   }
 }

@@ -35,6 +35,7 @@ class _DiseaseScreenState extends ConsumerState<DiseaseScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     return GrowToolShell(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -67,12 +68,12 @@ class _DiseaseScreenState extends ConsumerState<DiseaseScreen> {
                             padding: const EdgeInsets.all(16),
                             child: Column(
                               children: [
-                                Icon(Icons.photo_camera_outlined, size: 56, color: GrowColors.gray400),
+                                Icon(Icons.photo_camera_outlined, size: 56, color: cs.onSurfaceVariant),
                                 const SizedBox(height: 12),
                                 Text(
                                   'Take or upload a photo of your plant',
                                   textAlign: TextAlign.center,
-                                  style: GoogleFonts.inter(color: GrowColors.gray600),
+                                  style: GoogleFonts.inter(color: cs.onSurfaceVariant),
                                 ),
                                 const SizedBox(height: 16),
                                 Row(
@@ -98,7 +99,7 @@ class _DiseaseScreenState extends ConsumerState<DiseaseScreen> {
                                 Text(
                                   'AI will identify the plant and detect any diseases or issues',
                                   textAlign: TextAlign.center,
-                                  style: GoogleFonts.inter(fontSize: 12, color: GrowColors.gray600),
+                                  style: GoogleFonts.inter(fontSize: 12, color: cs.onSurfaceVariant),
                                 ),
                               ],
                             ),
@@ -188,8 +189,9 @@ class DottedBorderPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dash = Theme.of(context).colorScheme.outline.withValues(alpha: 0.65);
     return CustomPaint(
-      painter: _DashPainter(color: GrowColors.gray400),
+      painter: _DashPainter(color: dash),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: child,

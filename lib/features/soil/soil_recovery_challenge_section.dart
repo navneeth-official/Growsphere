@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/synthetic_tool_plants.dart';
-import '../../core/theme/grow_colors.dart';
 import '../../providers/providers.dart';
 
 class _RecoveryPlant {
@@ -92,6 +91,13 @@ class _SoilRecoveryChallengeSectionState extends ConsumerState<SoilRecoveryChall
 
   int? _expandedIndex;
 
+  void _goGardenAfterFrame(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      GoRouter.of(context).go('/garden');
+    });
+  }
+
   Future<void> _addToGarden(BuildContext context, String plantName) async {
     try {
       final plant = syntheticLegumeCoverPlant(plantName);
@@ -100,7 +106,7 @@ class _SoilRecoveryChallengeSectionState extends ConsumerState<SoilRecoveryChall
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Added $plantName to My Garden as a cover crop.')),
       );
-      context.go('/garden');
+      _goGardenAfterFrame(context);
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -122,7 +128,7 @@ class _SoilRecoveryChallengeSectionState extends ConsumerState<SoilRecoveryChall
         const SizedBox(height: 8),
         Text(
           'Tap a plant to expand soil benefits and rotation tips, then add the legume to My Garden.',
-          style: GoogleFonts.inter(fontSize: 13, color: GrowColors.gray600, height: 1.35),
+          style: GoogleFonts.inter(fontSize: 13, color: cs.onSurfaceVariant, height: 1.35),
         ),
         const SizedBox(height: 12),
         ...List.generate(_plants.length, (i) {
@@ -134,7 +140,7 @@ class _SoilRecoveryChallengeSectionState extends ConsumerState<SoilRecoveryChall
               clipBehavior: Clip.antiAlias,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: open ? cs.primary : GrowColors.gray200),
+                side: BorderSide(color: open ? cs.primary : cs.outline.withValues(alpha: 0.45)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -159,7 +165,7 @@ class _SoilRecoveryChallengeSectionState extends ConsumerState<SoilRecoveryChall
                                 const SizedBox(height: 4),
                                 Text(
                                   p.durationLine,
-                                  style: GoogleFonts.inter(fontSize: 13, height: 1.4, color: GrowColors.gray700),
+                                  style: GoogleFonts.inter(fontSize: 13, height: 1.4, color: cs.onSurfaceVariant),
                                 ),
                               ],
                             ),
@@ -177,15 +183,15 @@ class _SoilRecoveryChallengeSectionState extends ConsumerState<SoilRecoveryChall
                         children: [
                           _sectionTitle(cs, Icons.eco_outlined, 'Soil enrichment'),
                           const SizedBox(height: 6),
-                          Text(p.soilEnrichment, style: GoogleFonts.inter(fontSize: 13, height: 1.45)),
+                          Text(p.soilEnrichment, style: GoogleFonts.inter(fontSize: 13, height: 1.45, color: cs.onSurface)),
                           const SizedBox(height: 12),
                           _sectionTitle(cs, Icons.shuffle_outlined, 'What to grow after / before'),
                           const SizedBox(height: 6),
-                          Text(p.rotationGuidance, style: GoogleFonts.inter(fontSize: 13, height: 1.45)),
+                          Text(p.rotationGuidance, style: GoogleFonts.inter(fontSize: 13, height: 1.45, color: cs.onSurface)),
                           const SizedBox(height: 12),
                           _sectionTitle(cs, Icons.menu_book_outlined, 'More guidance'),
                           const SizedBox(height: 6),
-                          Text(p.moreInfo, style: GoogleFonts.inter(fontSize: 13, height: 1.45)),
+                          Text(p.moreInfo, style: GoogleFonts.inter(fontSize: 13, height: 1.45, color: cs.onSurface)),
                           const SizedBox(height: 14),
                           FilledButton.icon(
                             onPressed: () => _addToGarden(context, p.name),
@@ -209,7 +215,7 @@ class _SoilRecoveryChallengeSectionState extends ConsumerState<SoilRecoveryChall
       children: [
         Icon(icon, size: 18, color: cs.primary),
         const SizedBox(width: 6),
-        Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 14)),
+        Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 14, color: cs.onSurface)),
       ],
     );
   }
