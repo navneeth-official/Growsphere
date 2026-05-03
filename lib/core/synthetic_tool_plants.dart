@@ -27,7 +27,7 @@ Plant syntheticMicrogreenPlant({
   required int harvestDurationDays,
 }) {
   final slug = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
-  final id = 'tool_micro_$slug_${DateTime.now().microsecondsSinceEpoch}';
+  final id = 'tool_micro_${slug}_${DateTime.now().microsecondsSinceEpoch}';
   return Plant(
     id: id,
     name: name,
