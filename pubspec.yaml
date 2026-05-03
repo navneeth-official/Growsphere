@@ -33,6 +33,18 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: false
+  ios: true
+  macos: true
+  image_path: assets/branding/app_icon_source.png
+  web:
+    generate: true
+    image_path: assets/branding/app_icon_source.png
+    background_color: '#0d2615'
+    theme_color: '#0d2615'
 
 flutter:
   generate: true

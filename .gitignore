@@ -49,3 +49,4 @@ tool/app.zip
 # Hand-crop sync: never commit temp or raw Cursor filenames (path length breaks `git add` on Windows)
 assets/images/crops/hands/_staging_robocopy/
 assets/images/crops/hands/c__Users_*.png
+assets/branding/c__Users_*.png

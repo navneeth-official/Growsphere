@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Full-bleed launcher art (see assets/branding/app_icon_source.png). -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
-        <shape android:shape="rectangle">
-            <solid android:color="#FF2E7D32" />
-        </shape>
+        <bitmap
+            android:gravity="fill"
+            android:src="@drawable/ic_app_launcher_art" />
     </item>
-    <item
-        android:drawable="@drawable/ic_launcher_leaf_fg"
-        android:gravity="center"
-        android:width="64dp"
-        android:height="64dp" />
 </layer-list>
