@@ -1,8 +1,8 @@
 import '../domain/plant.dart';
 
 /// Bundled crop photos: most ids use the BGR archive under [assets/images/crops/*.jpg].
-/// Green chilli, tomato, brinjal, cucumber, French beans, and lettuce use hand-held photos
-/// under [assets/images/crops/hands/*.png] (refresh via [tool/copy_vegetable_hand_crops.ps1]).
+/// Hand-held reference photos live under [assets/images/crops/hands/*.png]:
+/// vegetables: [tool/copy_vegetable_hand_crops.ps1]; fruits: [tool/copy_fruit_hand_crops.ps1].
 const _kBundledAssetByPlantId = <String, String>{
   'tomato': 'assets/images/crops/hands/tomato.png',
   'chilli': 'assets/images/crops/hands/chilli.png',
@@ -25,11 +25,11 @@ const _kBundledAssetByPlantId = <String, String>{
   'carrot': 'assets/images/crops/carrot.jpg',
   'radish': 'assets/images/crops/radish.jpg',
   'bottle_gourd': 'assets/images/crops/bottle_gourd.jpg',
-  'pumpkin': 'assets/images/crops/pumpkin.jpg',
-  'strawberry': 'assets/images/crops/strawberry.jpg',
-  'banana': 'assets/images/crops/banana.jpg',
-  'mango': 'assets/images/crops/mango.jpg',
-  'citrus': 'assets/images/crops/citrus.jpg',
+  'pumpkin': 'assets/images/crops/hands/pumpkin.png',
+  'strawberry': 'assets/images/crops/hands/strawberry.png',
+  'banana': 'assets/images/crops/hands/banana.png',
+  'mango': 'assets/images/crops/hands/mango.png',
+  'citrus': 'assets/images/crops/hands/citrus.png',
   'sunflower': 'assets/images/crops/sunflower.jpg',
   'soybean': 'assets/images/crops/soybean.jpg',
   'groundnut': 'assets/images/crops/groundnut.jpg',
