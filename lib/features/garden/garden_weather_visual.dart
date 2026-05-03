@@ -101,7 +101,15 @@ class _WeatherSkyPainter extends CustomPainter {
       _WeatherMood.snowy => const [Color(0xFFCBD5E1), Color(0xFF94A3B8)],
       _WeatherMood.neutral => const [Color(0xFF475569), Color(0xFF334155)],
     };
-    canvas.drawRect(rect, Paint()..shader = LinearGradient(colors: base, begin: Alignment.topLeft, end: Alignment.bottomRight).createShader(rect)));
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          colors: base,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ).createShader(rect),
+    );
 
     if (mood == _WeatherMood.sunny) {
       final cx = size.width * 0.78;
