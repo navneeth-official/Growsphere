@@ -1,19 +1,18 @@
 import '../domain/plant.dart';
 
-/// Bundled 224×224 crop photos copied from the local archive
-/// `BGR_224x224/BGR_224x224/test/<class folder>/` (first `.jpg` per folder; pumpkin uses a second file
-/// from the gourds folder). Coriander and basil use parsley / oregano class folders as the archive
-/// has no dedicated coriander or sweet-basil class names matching the app catalog.
+/// Bundled crop photos: most ids use the BGR archive under [assets/images/crops/*.jpg].
+/// Green chilli, tomato, brinjal, cucumber, French beans, and lettuce use hand-held photos
+/// under [assets/images/crops/hands/*.png] (refresh via [tool/copy_vegetable_hand_crops.ps1]).
 const _kBundledAssetByPlantId = <String, String>{
-  'tomato': 'assets/images/crops/tomato.jpg',
-  'chilli': 'assets/images/crops/chilli.jpg',
+  'tomato': 'assets/images/crops/hands/tomato.png',
+  'chilli': 'assets/images/crops/hands/chilli.png',
   'okra': 'assets/images/crops/okra.jpg',
-  'brinjal': 'assets/images/crops/brinjal.jpg',
-  'cucumber': 'assets/images/crops/cucumber.jpg',
-  'beans': 'assets/images/crops/beans.jpg',
+  'brinjal': 'assets/images/crops/hands/brinjal.png',
+  'cucumber': 'assets/images/crops/hands/cucumber.png',
+  'beans': 'assets/images/crops/hands/beans.png',
   'peas': 'assets/images/crops/peas.jpg',
   'spinach': 'assets/images/crops/spinach.jpg',
-  'lettuce': 'assets/images/crops/lettuce.jpg',
+  'lettuce': 'assets/images/crops/hands/lettuce.png',
   'coriander': 'assets/images/crops/coriander.jpg',
   'mint': 'assets/images/crops/mint.jpg',
   'basil': 'assets/images/crops/basil.jpg',
