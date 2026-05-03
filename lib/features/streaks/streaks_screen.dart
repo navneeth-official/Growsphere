@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../domain/badge_catalog.dart';
 import '../../domain/grow_session.dart';
 import '../../providers/providers.dart';
+import '../../widgets/badge_medallion.dart';
 import '../shell/grow_tools_sheet.dart';
 
 List<MapEntry<String, (String title, String desc)>> _badgeEntriesForSession(GrowSession s) {
@@ -73,12 +74,23 @@ class StreaksScreen extends ConsumerWidget {
                   children: _badgeEntriesForSession(session).map<Widget>((e) {
                     final earned = session.earnedBadgeIds.contains(e.key);
                     final m = e.value;
+                    final cs = Theme.of(context).colorScheme;
                     return Tooltip(
                       message: m.$2,
                       child: Chip(
-                        avatar: Icon(earned ? Icons.emoji_events : Icons.lock_outline, size: 18),
+                        avatar: Padding(
+                          padding: const EdgeInsets.only(left: 2),
+                          child: earned
+                              ? BadgeMedallion(badgeId: e.key, size: 24, unlocked: true)
+                              : BadgeMedallion(badgeId: e.key, size: 24, unlocked: false),
+                        ),
                         label: Text(m.$1),
-                        side: BorderSide(color: earned ? Colors.amber : Colors.grey),
+                        side: BorderSide(
+                          color: earned ? Colors.amber : cs.outline.withValues(alpha: 0.5),
+                        ),
+                        backgroundColor: earned
+                            ? Color.alphaBlend(Colors.amber.withValues(alpha: 0.15), cs.surfaceContainerHighest)
+                            : cs.surfaceContainerHighest,
                       ),
                     );
                   }).toList(),

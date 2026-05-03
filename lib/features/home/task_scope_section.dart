@@ -11,6 +11,7 @@ import '../../domain/badge_catalog.dart';
 import '../../domain/grow_session.dart';
 import '../../domain/grow_task.dart';
 import '../../providers/providers.dart';
+import '../../widgets/badge_medallion.dart';
 import 'grow_task_checkbox_tile.dart';
 
 DateTime _dOnly(DateTime d) => DateTime(d.year, d.month, d.day);
@@ -76,6 +77,10 @@ class FarmStreakCard extends StatelessWidget {
                 children: streakBadges
                     .map(
                       (id) => Chip(
+                        avatar: Padding(
+                          padding: const EdgeInsets.only(left: 2),
+                          child: BadgeMedallion(badgeId: id, size: 22, unlocked: true),
+                        ),
                         label: Text(BadgeCatalog.titleFor(id), style: GoogleFonts.inter(fontSize: 11)),
                         visualDensity: VisualDensity.compact,
                         backgroundColor: cs.primaryContainer.withValues(alpha: 0.5),

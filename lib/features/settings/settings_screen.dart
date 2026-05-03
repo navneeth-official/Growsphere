@@ -21,6 +21,21 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
         children: [
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            leading: CircleAvatar(
+              backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25),
+              child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.primary),
+            ),
+            title: Text('My profile', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16)),
+            subtitle: Text(
+              'Display name, streaks across crops, and badges',
+              style: GoogleFonts.inter(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/profile'),
+          ),
+          const SizedBox(height: 8),
           _SectionCard(
             icon: Icons.light_mode_outlined,
             title: l.appearance,

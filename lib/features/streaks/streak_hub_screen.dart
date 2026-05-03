@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../domain/badge_catalog.dart';
 import '../../domain/grow_session.dart';
 import '../../providers/providers.dart';
+import '../../widgets/badge_medallion.dart';
 import '../shell/grow_tools_sheet.dart';
 
 class StreakHubScreen extends ConsumerWidget {
@@ -178,9 +179,10 @@ class StreakHubScreen extends ConsumerWidget {
         ),
         child: ListTile(
           dense: true,
-          leading: Icon(
-            hasBadge ? Icons.emoji_events : Icons.flag_outlined,
-            color: hasBadge ? Colors.amber.shade700 : cs.onSurfaceVariant,
+          leading: BadgeMedallion(
+            badgeId: id,
+            size: 40,
+            unlocked: hasBadge,
           ),
           title: Text(
             BadgeCatalog.streakMilestoneTitle(m),
@@ -221,10 +223,11 @@ class StreakHubScreen extends ConsumerWidget {
         return Tooltip(
           message: m.$2,
           child: Chip(
-            avatar: Icon(
-              earned ? BadgeCatalog.iconFor(e.key) : Icons.lock_outline,
-              size: 18,
-              color: earned ? BadgeCatalog.accentFor(e.key, cs) : cs.onSurfaceVariant,
+            avatar: Padding(
+              padding: const EdgeInsets.only(left: 2),
+              child: earned
+                  ? BadgeMedallion(badgeId: e.key, size: 24, unlocked: true)
+                  : Icon(Icons.lock_outline, size: 18, color: cs.onSurfaceVariant),
             ),
             label: Text(
               m.$1,
@@ -308,6 +311,10 @@ class _ArchiveCard extends StatelessWidget {
                 children: s.earnedBadgeIds
                     .map(
                       (id) => Chip(
+                        avatar: Padding(
+                          padding: const EdgeInsets.only(left: 2),
+                          child: BadgeMedallion(badgeId: id, size: 22, unlocked: true),
+                        ),
                         label: Text(
                           BadgeCatalog.titleFor(id),
                           style: GoogleFonts.inter(

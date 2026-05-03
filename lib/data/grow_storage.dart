@@ -27,6 +27,8 @@ const _kFieldTelemetrySnap = 'field_telemetry_snap_json';
 const _kFieldTelemetryBaseline = 'field_telemetry_baseline_json';
 const _kWateringDurMin = 'watering_duration_minutes';
 const _kGrowArchives = 'grow_session_archives_json';
+const _kUserJourneyBadges = 'user_journey_badges_json';
+const _kProfileDisplayName = 'profile_display_name';
 
 /// Local key-value store. Swap for Firestore sync layer later.
 class GrowStorage {
@@ -201,6 +203,7 @@ class GrowStorage {
     required String title,
     required String body,
     bool read = false,
+    String? badgeId,
   }) async {
     final list = loadInAppNotifications();
     list.insert(0, {
@@ -209,6 +212,7 @@ class GrowStorage {
       'body': body,
       'at': DateTime.now().toIso8601String(),
       'read': read,
+      if (badgeId != null) 'badgeId': badgeId,
     });
     while (list.length > 80) {
       list.removeLast();
@@ -391,6 +395,60 @@ class GrowStorage {
     }
     m[plantId] = month1To12.clamp(1, 12);
     await box.put(_kFarmPlanMonths, jsonEncode(m));
+  }
+
+  // --- Profile & lifetime journey badges ---
+
+  List<String> loadUserJourneyBadgeIds() {
+    final raw = box.get(_kUserJourneyBadges) as String?;
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list.map((e) => e.toString()).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Grants journey badges from [plant] id; returns newly added ids (persisted).
+  Future<List<String>> tryGrantJourneyBadgesFromPlant(Plant plant) async {
+    final list = List<String>.from(loadUserJourneyBadgeIds());
+    final added = <String>[];
+    void grant(String id) {
+      if (!list.contains(id)) {
+        list.add(id);
+        added.add(id);
+      }
+    }
+
+    if (plant.id.startsWith('tool_micro_')) {
+      grant('badge_first_microgreens');
+    }
+    if (plant.id.startsWith('tool_cover_')) {
+      grant('badge_first_soil_recovery');
+    }
+    if (!plant.id.startsWith('tool_')) {
+      grant('badge_first_crop');
+    }
+
+    if (added.isNotEmpty) {
+      await box.put(_kUserJourneyBadges, jsonEncode(list));
+    }
+    return added;
+  }
+
+  String? get profileDisplayName {
+    final s = box.get(_kProfileDisplayName) as String?;
+    if (s == null || s.trim().isEmpty) return null;
+    return s.trim();
+  }
+
+  Future<void> setProfileDisplayName(String? name) async {
+    if (name == null || name.trim().isEmpty) {
+      await box.delete(_kProfileDisplayName);
+    } else {
+      await box.put(_kProfileDisplayName, name.trim());
+    }
   }
 }
 

@@ -194,6 +194,24 @@ class BadgeCatalog {
       icon: Icons.apartment,
       accent: Color(0xFF0D9488),
     ),
+    'badge_first_crop': _BadgeDef(
+      title: 'First Crop',
+      description: 'Started your first catalog or custom crop in My Garden.',
+      icon: Icons.agriculture,
+      accent: Color(0xFF15803D),
+    ),
+    'badge_first_microgreens': _BadgeDef(
+      title: 'Micro Tray Pioneer',
+      description: 'Added your first microgreens tray from the guide.',
+      icon: Icons.grass,
+      accent: Color(0xFF22C55E),
+    ),
+    'badge_first_soil_recovery': _BadgeDef(
+      title: 'Soil Recovery Starter',
+      description: 'Planted your first legume cover crop for soil recovery.',
+      icon: Icons.spa_outlined,
+      accent: Color(0xFF92400E),
+    ),
   };
 }
 

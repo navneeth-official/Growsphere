@@ -15,6 +15,7 @@ import '../data/gemini_market_price_repository.dart';
 import '../data/grow_storage.dart';
 import '../data/market_price_repository.dart';
 import '../data/plant_repository.dart';
+import '../data/reverse_geocode_service.dart';
 import '../data/sprinkler_repository.dart';
 import '../data/weather_repository.dart';
 import 'route_refresh.dart';
@@ -99,6 +100,8 @@ final diseaseRepositoryProvider = Provider<DiseaseAnalysisRepository>((ref) {
 });
 
 final weatherRepositoryProvider = Provider<WeatherRepository>((ref) => WeatherRepository());
+
+final reverseGeocodeServiceProvider = Provider<ReverseGeocodeService>((ref) => ReverseGeocodeService());
 
 final sprinklerRepositoryProvider = Provider<SprinklerRepository>((ref) {
   final s = ref.watch(growStorageProvider);

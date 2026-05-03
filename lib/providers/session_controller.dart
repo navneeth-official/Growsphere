@@ -6,6 +6,7 @@ import '../core/farm_plan_templates.dart';
 import '../core/services/care_timing_service.dart';
 import '../data/grow_storage.dart';
 import '../domain/activity_stage.dart';
+import '../domain/badge_catalog.dart';
 import '../domain/farm_plan_ai_result.dart';
 import '../domain/grow_enums.dart';
 import '../domain/grow_session.dart';
@@ -13,6 +14,7 @@ import '../domain/grow_task.dart';
 import '../domain/plant.dart';
 import 'base_providers.dart';
 import 'route_refresh.dart';
+import 'sprinkler_live_provider.dart';
 
 String _dayKey(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -105,6 +107,10 @@ class SessionController extends Notifier<GrowSession?> {
       farmingStartDateIso: farmIso,
     );
     await _persist();
+    final journey = await _storage.tryGrantJourneyBadgesFromPlant(plant);
+    if (journey.isNotEmpty) {
+      await _notifyBadgeEarned(journey, plantName: plant.name, journeyMilestone: true);
+    }
   }
 
   /// Saves [plant] as a custom catalog entry, builds a template or AI farm plan, and appends a new garden grow.
@@ -200,8 +206,11 @@ class SessionController extends Notifier<GrowSession?> {
         s.plantHealth = (s.plantHealth - 3).clamp(0, 100);
         break;
     }
-    _awardBadges(s);
+    final newBadges = _awardBadges(s);
     await _persist();
+    if (newBadges.isNotEmpty) {
+      await _notifyBadgeEarned(newBadges, plantName: s.plantName);
+    }
     _reEmitSession();
     return fb;
   }
@@ -216,6 +225,7 @@ class SessionController extends Notifier<GrowSession?> {
     final s = state;
     if (s == null) return null;
     if (s.farmingLockedOn(DateTime.now())) return null;
+    var streakDay = false;
     if (overwatered && !logCareFromCalendar) {
       s.plantHealth = (s.plantHealth - 12).clamp(0, 100);
     } else if (!overwatered && secondsWatered >= (idealSecondsMid * 0.45).round()) {
@@ -235,7 +245,7 @@ class SessionController extends Notifier<GrowSession?> {
           t.completedAt = today;
         }
       }
-      _maybeCreditPerfectDayStreak(s, todayD);
+      streakDay = _maybeCreditPerfectDayStreak(s, todayD);
     }
     WaterFeedback? fb;
     if (logCareFromCalendar) {
@@ -246,8 +256,18 @@ class SessionController extends Notifier<GrowSession?> {
         fb = WaterFeedback.suboptimal;
       }
     }
-    _awardBadges(s);
+    final newBadges = _awardBadges(s);
     await _persist();
+    if (newBadges.isNotEmpty) {
+      await _notifyBadgeEarned(newBadges, plantName: s.plantName);
+    }
+    if (streakDay) {
+      final streakBadgeId = 'badge_streak_day_${s.streak}';
+      final alreadyBadgeNotified = newBadges.contains(streakBadgeId);
+      if (!alreadyBadgeNotified) {
+        await _notifyStreakUpdate(plantName: s.plantName, streak: s.streak);
+      }
+    }
     _reEmitSession();
     return fb;
   }
@@ -265,7 +285,8 @@ class SessionController extends Notifier<GrowSession?> {
     }
   }
 
-  void _awardBadges(GrowSession s) {
+  List<String> _awardBadges(GrowSession s) {
+    final before = Set<String>.from(s.earnedBadgeIds);
     void add(String id) {
       if (!s.earnedBadgeIds.contains(id)) s.earnedBadgeIds.add(id);
     }
@@ -328,6 +349,55 @@ class SessionController extends Notifier<GrowSession?> {
       distinctTaskDays.add(_dayKey(t.dueDate));
     }
     if (distinctTaskDays.length >= 10) add('badge_night_owl_farmer');
+    return s.earnedBadgeIds.where((id) => !before.contains(id)).toList();
+  }
+
+  Future<void> _notifyBadgeEarned(
+    List<String> ids, {
+    required String plantName,
+    bool journeyMilestone = false,
+  }) async {
+    if (ids.isEmpty) return;
+    final n = ref.read(notificationServiceProvider);
+    final push = _storage.pushNotificationsEnabled;
+    for (final id in ids) {
+      final name = BadgeCatalog.titleFor(id);
+      final desc = BadgeCatalog.descriptionFor(id);
+      final title = journeyMilestone ? 'Journey badge: $name' : 'Badge earned: $name';
+      final body = journeyMilestone ? desc : '$plantName · $desc';
+      await _storage.addInAppNotification(
+        id: 'badge_${id}_${DateTime.now().microsecondsSinceEpoch}',
+        title: title,
+        body: body,
+        badgeId: id,
+      );
+      if (push) {
+        try {
+          await n.showAchievement(
+            title: title,
+            body: body,
+          );
+        } catch (_) {}
+      }
+    }
+    ref.read(inAppNotificationsRevisionProvider.notifier).state++;
+  }
+
+  Future<void> _notifyStreakUpdate({required String plantName, required int streak}) async {
+    await _storage.addInAppNotification(
+      id: 'streak_${DateTime.now().microsecondsSinceEpoch}',
+      title: 'Perfect-day streak: $streak',
+      body: '$plantName — every task due today is complete. Keep the chain going!',
+    );
+    if (_storage.pushNotificationsEnabled) {
+      try {
+        await ref.read(notificationServiceProvider).showAchievement(
+              title: 'Streak: $streak day(s)',
+              body: 'Nice work on $plantName.',
+            );
+      } catch (_) {}
+    }
+    ref.read(inAppNotificationsRevisionProvider.notifier).state++;
   }
 
   /// +1 streak only when every task due that calendar day is done; [creditDay] is the due date (calendar day).
@@ -382,8 +452,18 @@ class SessionController extends Notifier<GrowSession?> {
       s.plantHealth = (s.plantHealth - 5).clamp(0, 100);
     }
     final streakDay = _maybeCreditPerfectDayStreak(s, due);
-    _awardBadges(s);
+    final newBadges = _awardBadges(s);
     await _persist();
+    if (newBadges.isNotEmpty) {
+      await _notifyBadgeEarned(newBadges, plantName: s.plantName);
+    }
+    if (streakDay) {
+      final streakBadgeId = 'badge_streak_day_${s.streak}';
+      final alreadyBadgeNotified = newBadges.contains(streakBadgeId);
+      if (!alreadyBadgeNotified) {
+        await _notifyStreakUpdate(plantName: s.plantName, streak: s.streak);
+      }
+    }
     _reEmitSession();
     return streakDay ? 2 : 1;
   }

@@ -15,6 +15,7 @@ import '../features/plant/plant_detail_screen.dart';
 import '../features/plant/plant_pick_screen.dart';
 import '../features/research/plant_research_center_screen.dart';
 import '../features/research/research_screen.dart';
+import '../features/profile/profile_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/soil/soil_recovery_screen.dart';
 import '../features/notifications/notifications_screen.dart';
@@ -93,6 +94,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/streaks', builder: (_, __) => const StreaksScreen()),
       GoRoute(path: '/streak-hub', builder: (_, __) => const StreakHubScreen()),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+      GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
     ],
   );
 });

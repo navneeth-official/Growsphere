@@ -95,6 +95,7 @@ class NotificationService {
   static const _farmTasksId = 8801;
   static const _channelFarm = 'growsphere_farm';
   static const _channelAlerts = 'growsphere_alerts';
+  static const _channelAchievements = 'growsphere_achievements';
 
   Future<void> cancelFarmTasksDigest() async {
     await _plugin.cancel(_farmTasksId);
@@ -171,6 +172,29 @@ class NotificationService {
       id,
       title,
       body,
+      NotificationDetails(android: android, iOS: ios),
+    );
+  }
+
+  /// Immediate banner for badges / streaks (respect user push toggle in caller).
+  Future<void> showAchievement({required String title, required String body}) async {
+    final id = DateTime.now().millisecondsSinceEpoch.remainder(2000000000);
+    final android = AndroidNotificationDetails(
+      _channelAchievements,
+      'Achievements',
+      channelDescription: 'Badges, streaks, and milestones',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const ios = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+    await _plugin.show(
+      id,
+      title,
+      body.length > 160 ? '${body.substring(0, 157)}…' : body,
       NotificationDetails(android: android, iOS: ios),
     );
   }

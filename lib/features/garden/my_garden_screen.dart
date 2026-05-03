@@ -15,6 +15,7 @@ import '../../domain/grow_session.dart';
 import '../../domain/plant.dart';
 import '../../providers/providers.dart';
 import '../shell/grow_layout.dart';
+import 'garden_weather_visual.dart';
 
 final _gardenCardPlantProvider = FutureProvider.family<Plant?, String>((ref, id) async {
   ref.watch(localDataRevisionProvider);
@@ -32,6 +33,7 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
   WeatherSnapshot? _weather;
   String? _weatherErr;
   bool _weatherLoading = true;
+  String? _placeLabel;
   String? _gardenTip;
   bool _tipLoading = false;
 
@@ -48,6 +50,7 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
     setState(() {
       _weatherLoading = true;
       _weatherErr = null;
+      _placeLabel = null;
     });
     try {
       final perm = await Geolocator.checkPermission();
@@ -63,7 +66,13 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
         await _loadTip(null);
         return;
       }
-      final pos = await Geolocator.getCurrentPosition();
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      ref.read(reverseGeocodeServiceProvider).placeLabel(pos.latitude, pos.longitude).then((label) {
+        if (!mounted || label == null) return;
+        setState(() => _placeLabel = label);
+      });
       final w = await ref.read(weatherRepositoryProvider).fetch(pos.latitude, pos.longitude);
       if (!mounted) return;
       setState(() {
@@ -183,31 +192,55 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: cardGreen,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: _weatherLoading
-                  ? const Center(
+          _weatherLoading
+              ? DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: cardGreen,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(
                       child: Padding(
                         padding: EdgeInsets.all(24),
                         child: CircularProgressIndicator(color: Colors.white),
                       ),
-                    )
-                  : _weatherErr != null
-                      ? Text(
+                    ),
+                  ),
+                )
+              : _weatherErr != null
+                  ? DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: cardGreen,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
                           l.gardenWeatherLoadError,
                           style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
-                        )
-                      : _weather == null
-                          ? Text(
+                        ),
+                      ),
+                    )
+                  : _weather == null
+                      ? DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: cardGreen,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
                               l.gardenWeatherUnavailable,
                               style: GoogleFonts.inter(color: Colors.white),
-                            )
-                          : Column(
+                            ),
+                          ),
+                        )
+                      : GardenWeatherVisual(
+                          weather: _weather!,
+                          foreground: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
@@ -234,7 +267,7 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
                                             ),
                                           ),
                                           Text(
-                                            l.myGardenLocationHint,
+                                            _placeLabel ?? l.myGardenLocationHint,
                                             style: GoogleFonts.inter(
                                               fontSize: 13,
                                               color: Colors.white.withValues(alpha: 0.88),
@@ -349,8 +382,8 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
                                 ],
                               ],
                             ),
-            ),
-          ),
+                          ),
+                        ),
           const SizedBox(height: 20),
           Row(
             children: [
