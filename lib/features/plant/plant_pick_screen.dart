@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/network/image_request_headers.dart';
 import '../../core/widgets/plant_catalog_image.dart';
 import '../../core/plant_catalog_category.dart';
 import '../../data/location_crop_suggestions_repository.dart';
