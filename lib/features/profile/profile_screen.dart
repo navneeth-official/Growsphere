@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../domain/badge_catalog.dart';
 import '../../domain/grow_session.dart';
@@ -19,11 +23,15 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
   bool _dirty = false;
 
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
     super.dispose();
   }
 
@@ -35,9 +43,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final archives = storage.loadGrowArchives();
     final journey = storage.loadUserJourneyBadgeIds();
     final display = storage.profileDisplayName;
+    final photoPath = storage.profilePhotoPath;
+    final email = storage.profileEmail;
+    final phone = storage.profilePhone;
 
     if (!_dirty && _nameCtrl.text.isEmpty && display != null) {
       _nameCtrl.text = display;
+    }
+    if (!_dirty && _emailCtrl.text.isEmpty && email != null) {
+      _emailCtrl.text = email;
+    }
+    if (!_dirty && _phoneCtrl.text.isEmpty && phone != null) {
+      _phoneCtrl.text = phone;
     }
 
     final cs = Theme.of(context).colorScheme;
@@ -81,19 +98,73 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               padding: const EdgeInsets.all(18),
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: cs.primary,
-                    child: Icon(Icons.person, size: 44, color: cs.onPrimary),
+                  Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      CircleAvatar(
+                        radius: 44,
+                        backgroundColor: cs.primary,
+                        backgroundImage: () {
+                          final p = photoPath;
+                          if (p == null || !File(p).existsSync()) return null;
+                          return FileImage(File(p));
+                        }(),
+                        child: () {
+                          final p = photoPath;
+                          if (p != null && File(p).existsSync()) return null;
+                          return Icon(Icons.person, size: 48, color: cs.onPrimary);
+                        }(),
+                      ),
+                      Positioned(
+                        child: Material(
+                          color: cs.secondaryContainer,
+                          shape: const CircleBorder(),
+                          child: IconButton(
+                            tooltip: 'Change photo',
+                            icon: Icon(Icons.camera_alt, size: 18, color: cs.onSecondaryContainer),
+                            onPressed: () async {
+                              final x = await ImagePicker().pickImage(
+                                source: ImageSource.gallery,
+                                maxWidth: 1200,
+                                imageQuality: 88,
+                              );
+                              if (x == null || !context.mounted) return;
+                              try {
+                                final dir = await getApplicationDocumentsDirectory();
+                                final dest = File('${dir.path}/profile_avatar.jpg');
+                                await File(x.path).copy(dest.path);
+                                await storage.setProfilePhotoPath(dest.path);
+                                ref.read(localDataRevisionProvider.notifier).state++;
+                                setState(() => _dirty = true);
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Could not save photo: $e')),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 14),
+                  TextButton(
+                    onPressed: () async {
+                      await storage.setProfilePhotoPath(null);
+                      ref.read(localDataRevisionProvider.notifier).state++;
+                      setState(() => _dirty = true);
+                    },
+                    child: const Text('Remove photo'),
+                  ),
+                  const SizedBox(height: 6),
                   Text(
                     display ?? 'Growsphere grower',
                     style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: cs.onSurface),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Tap below to set how your name appears in the app.',
+                    'Photo, name, email, and phone are stored on this device for reminders and updates.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(fontSize: 12, color: cs.onSurfaceVariant, height: 1.35),
                   ),
@@ -109,12 +180,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
+                  TextField(
+                    controller: _emailCtrl,
+                    onChanged: (_) => setState(() => _dirty = true),
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      hintText: 'you@example.com',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _phoneCtrl,
+                    onChanged: (_) => setState(() => _dirty = true),
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: 'Phone',
+                      hintText: '+91 …',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   Align(
                     alignment: Alignment.centerRight,
                     child: FilledButton(
                       onPressed: () async {
                         await storage.setProfileDisplayName(_nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text);
+                        await storage.setProfileEmail(_emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text);
+                        await storage.setProfilePhone(_phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text);
                         ref.read(localDataRevisionProvider.notifier).state++;
+                        setState(() => _dirty = false);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved')));
                         }

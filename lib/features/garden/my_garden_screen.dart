@@ -15,7 +15,7 @@ import '../../domain/grow_session.dart';
 import '../../domain/plant.dart';
 import '../../providers/providers.dart';
 import '../shell/grow_layout.dart';
-import 'garden_weather_visual.dart';
+import 'garden_weather_banner.dart';
 
 final _gardenCardPlantProvider = FutureProvider.family<Plant?, String>((ref, id) async {
   ref.watch(localDataRevisionProvider);
@@ -273,164 +273,98 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
                             ),
                           ),
                         )
-                      : GardenWeatherVisual(
-                          weather: _weather!,
-                          foreground: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            GardenWeatherHeroBanner(
+                              weather: _weather!,
+                              placeLine: _placeLabel ?? l.myGardenLocationHint,
+                              sourceLine: switch (_weather!.source) {
+                                WeatherDataSource.openMeteo => 'Open-Meteo',
+                                WeatherDataSource.openWeatherMap => 'OpenWeatherMap',
+                                WeatherDataSource.aiEstimate => 'AI seasonal estimate',
+                              },
+                            ),
+                            if (garden.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Card(
+                                color: cs.surfaceContainerHighest,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  side: BorderSide(color: cs.outline.withValues(alpha: 0.25)),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
                                         children: [
-                                          Text(
-                                            '${_weather!.temperatureC.round()}°C',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 32,
-                                              fontWeight: FontWeight.w800,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          Text(
-                                            WeatherSnapshot.labelForWmoCode(_weather!.code),
-                                            style: GoogleFonts.inter(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.white.withValues(alpha: 0.95),
-                                            ),
-                                          ),
-                                          Text(
-                                            _placeLabel ?? l.myGardenLocationHint,
-                                            style: GoogleFonts.inter(
-                                              fontSize: 13,
-                                              color: Colors.white.withValues(alpha: 0.88),
-                                            ),
-                                          ),
-                                          Text(
-                                            switch (_weather!.source) {
-                                              WeatherDataSource.openMeteo => 'Forecast: Open-Meteo',
-                                              WeatherDataSource.openWeatherMap => 'Forecast: OpenWeatherMap',
-                                              WeatherDataSource.aiEstimate => 'Forecast: AI seasonal estimate',
-                                            },
-                                            style: GoogleFonts.inter(
-                                              fontSize: 11,
-                                              color: Colors.white.withValues(alpha: 0.72),
+                                          Icon(Icons.spa, color: cs.primary, size: 22),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              l.plantTipHeader,
+                                              style: GoogleFonts.inter(
+                                                fontWeight: FontWeight.w800,
+                                                color: cs.onSurface,
+                                                fontSize: 14,
+                                              ),
                                             ),
                                           ),
                                         ],
                                       ),
-                                    ),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        _miniStat(
-                                          Icons.water_drop_outlined,
-                                          '${_weather!.humidityPct?.round() ?? '—'}%',
-                                          l.gardenHumidityShort,
+                                      const SizedBox(height: 8),
+                                      if (_tipLoading)
+                                        Text(
+                                          l.gardenAiTipLoading,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            color: cs.onSurfaceVariant,
+                                          ),
+                                        )
+                                      else if (_gardenTip != null)
+                                        Text(
+                                          _gardenTip!,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            height: 1.45,
+                                            color: cs.onSurface,
+                                          ),
                                         ),
-                                        const SizedBox(height: 6),
-                                        _miniStat(
-                                          Icons.air,
-                                          '${_weather!.windKmh.round()} km/h',
-                                          'Wind',
+                                      const SizedBox(height: 14),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.opacity, color: cs.primary, size: 20),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              l.wateringAdjustmentHeader,
+                                              style: GoogleFonts.inter(
+                                                fontWeight: FontWeight.w700,
+                                                color: cs.onSurface,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        _aggregateWateringNote(garden),
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          height: 1.4,
+                                          color: cs.onSurfaceVariant,
                                         ),
-                                        const SizedBox(height: 6),
-                                        _miniStat(
-                                          Icons.grain,
-                                          _weather!.rainChancePct != null
-                                              ? '${_weather!.rainChancePct}%'
-                                              : '—',
-                                          l.gardenRainChanceShort,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                if (garden.isNotEmpty) ...[
-                                  const SizedBox(height: 14),
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.spa, color: Colors.white, size: 20),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            l.plantTipHeader,
-                                            style: GoogleFonts.inter(
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.white,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  if (_tipLoading)
-                                    Text(
-                                      l.gardenAiTipLoading,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        color: Colors.white.withValues(alpha: 0.9),
-                                      ),
-                                    )
-                                  else if (_gardenTip != null)
-                                    Text(
-                                      _gardenTip!,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        height: 1.4,
-                                        color: Colors.white.withValues(alpha: 0.95),
-                                      ),
-                                    ),
-                                  const SizedBox(height: 12),
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.opacity, color: Colors.white, size: 20),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            l.wateringAdjustmentHeader,
-                                            style: GoogleFonts.inter(
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.white,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    _aggregateWateringNote(garden),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      color: Colors.white.withValues(alpha: 0.92),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
+                              ),
+                            ],
+                          ],
                         ),
           const SizedBox(height: 20),
           Row(
@@ -508,36 +442,6 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
   String _aggregateWateringNote(List<GrowSession> garden) {
     if (garden.length == 1) return garden.first.wateringRecommendationText;
     return 'Review each card below — mixed crops may need different rhythms.';
-  }
-
-  Widget _miniStat(IconData icon, String value, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: Colors.white, size: 16),
-        const SizedBox(width: 4),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                color: Colors.white.withValues(alpha: 0.85),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
   }
 }
 

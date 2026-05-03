@@ -254,9 +254,21 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
               const SizedBox(height: 8),
               SegmentedButton<GrowLocationType>(
                 segments: [
-                  ButtonSegment(value: GrowLocationType.indoor, label: Text(l.indoor)),
-                  ButtonSegment(value: GrowLocationType.balcony, label: Text(l.balcony)),
-                  ButtonSegment(value: GrowLocationType.terrace, label: Text(l.terrace)),
+                  ButtonSegment(
+                    value: GrowLocationType.indoor,
+                    icon: const Icon(Icons.weekend_outlined, size: 20),
+                    label: Text(l.indoor),
+                  ),
+                  ButtonSegment(
+                    value: GrowLocationType.balcony,
+                    icon: const Icon(Icons.home_work_outlined, size: 20),
+                    label: Text(l.balcony),
+                  ),
+                  ButtonSegment(
+                    value: GrowLocationType.terrace,
+                    icon: const Icon(Icons.landscape_outlined, size: 20),
+                    label: Text(l.terrace),
+                  ),
                 ],
                 selected: {_loc},
                 onSelectionChanged: (s) {
@@ -269,9 +281,21 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
               const SizedBox(height: 8),
               SegmentedButton<SunlightLevel>(
                 segments: [
-                  ButtonSegment(value: SunlightLevel.low, label: Text(l.sunLow)),
-                  ButtonSegment(value: SunlightLevel.medium, label: Text(l.sunMedium)),
-                  ButtonSegment(value: SunlightLevel.high, label: Text(l.sunHigh)),
+                  ButtonSegment(
+                    value: SunlightLevel.low,
+                    icon: const Icon(Icons.wb_shade_outlined, size: 20),
+                    label: Text(l.sunLow),
+                  ),
+                  ButtonSegment(
+                    value: SunlightLevel.medium,
+                    icon: const Icon(Icons.cloud_outlined, size: 20),
+                    label: Text(l.sunMedium),
+                  ),
+                  ButtonSegment(
+                    value: SunlightLevel.high,
+                    icon: const Icon(Icons.wb_sunny_outlined, size: 20),
+                    label: Text(l.sunHigh),
+                  ),
                 ],
                 selected: {_sun},
                 onSelectionChanged: (s) {

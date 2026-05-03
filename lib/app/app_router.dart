@@ -8,6 +8,7 @@ import '../features/ai_chat/ai_chat_screen.dart';
 import '../features/garden/my_garden_screen.dart';
 import '../features/plant/plant_garden_setup_screen.dart';
 import '../features/environment/environment_screen.dart';
+import '../features/home/farm_plan_chart_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/market/market_screen.dart';
 import '../features/pest/pest_screen.dart';
@@ -78,6 +79,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, s) => EnvironmentScreen(plantId: s.pathParameters['id']!),
       ),
       GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+      GoRoute(path: '/farm-plan-chart', builder: (_, __) => const FarmPlanChartScreen()),
       GoRoute(path: '/pest', builder: (_, __) => const PestScreen()),
       GoRoute(path: '/market', builder: (_, __) => const MarketScreen()),
       GoRoute(path: '/chat', builder: (_, __) => const AiChatScreen()),

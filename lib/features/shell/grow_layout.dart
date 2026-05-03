@@ -51,7 +51,7 @@ class GrowLayout extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    final showPlantFab = path == '/home' || path == '/garden';
+    final showPlantFab = path == '/home' || path == '/garden' || path == '/farm-plan-chart';
     final fab = floatingActionButton ??
         (showPlantFab
             ? FloatingActionButton(

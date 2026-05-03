@@ -30,6 +30,9 @@ const _kWateringDurMin = 'watering_duration_minutes';
 const _kGrowArchives = 'grow_session_archives_json';
 const _kUserJourneyBadges = 'user_journey_badges_json';
 const _kProfileDisplayName = 'profile_display_name';
+const _kProfilePhotoPath = 'profile_photo_path';
+const _kProfileEmail = 'profile_email';
+const _kProfilePhone = 'profile_phone';
 
 /// Local key-value store. Swap for Firestore sync layer later.
 class GrowStorage {
@@ -565,6 +568,48 @@ class GrowStorage {
       await box.delete(_kProfileDisplayName);
     } else {
       await box.put(_kProfileDisplayName, name.trim());
+    }
+  }
+
+  String? get profilePhotoPath {
+    final s = box.get(_kProfilePhotoPath) as String?;
+    if (s == null || s.trim().isEmpty) return null;
+    return s.trim();
+  }
+
+  Future<void> setProfilePhotoPath(String? path) async {
+    if (path == null || path.trim().isEmpty) {
+      await box.delete(_kProfilePhotoPath);
+    } else {
+      await box.put(_kProfilePhotoPath, path.trim());
+    }
+  }
+
+  String? get profileEmail {
+    final s = box.get(_kProfileEmail) as String?;
+    if (s == null || s.trim().isEmpty) return null;
+    return s.trim();
+  }
+
+  Future<void> setProfileEmail(String? email) async {
+    if (email == null || email.trim().isEmpty) {
+      await box.delete(_kProfileEmail);
+    } else {
+      await box.put(_kProfileEmail, email.trim());
+    }
+  }
+
+  String? get profilePhone {
+    final s = box.get(_kProfilePhone) as String?;
+    if (s == null || s.trim().isEmpty) return null;
+    return s.trim();
+  }
+
+  Future<void> setProfilePhone(String? phone) async {
+    if (phone == null || phone.trim().isEmpty) {
+      await box.delete(_kProfilePhone);
+    } else {
+      await box.put(_kProfilePhone, phone.trim());
     }
   }
 }
