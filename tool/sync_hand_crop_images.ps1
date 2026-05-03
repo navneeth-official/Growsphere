@@ -27,6 +27,7 @@ $dest = (Join-Path $PSScriptRoot '..\assets\images\crops\hands' | Resolve-Path).
 # UUID suffixes (…_images_image-<uuid>.png) in chat upload order -> catalog plant id
 # Order: chilli, tomato, brinjal, cucumber, french beans, lettuce, pumpkin, strawberries,
 #        banana, mangoes, citrus, wheat, green peas, garlic, onions, potato, carrot, radish, spinach
+# Batch 2 (chat order): rice, maize, soyabean, ground nut, okra, bottle gourd -> ids soybean, groundnut, bottle_gourd
 $cursorMap = [ordered]@{
   'c72c1349-f3fb-4abe-a5e9-66fb55c68b2b' = 'chilli'
   '3de4dd21-82d9-45c8-8613-8d9384abb50f' = 'tomato'
@@ -47,6 +48,12 @@ $cursorMap = [ordered]@{
   '7e279816-c2fe-4446-ad1e-9906fb0918f8' = 'carrot'
   'bdbc29f7-544c-454d-8f82-6d0a17050688' = 'radish'
   'e26ef911-4c04-497f-a6c2-0f069c9375a2' = 'spinach'
+  '46459d95-ff07-413f-b341-b8c2d1814351' = 'rice'
+  '85e4180c-c638-44b9-9545-e1190038abd0' = 'maize'
+  '14e96cce-4440-49ed-b61b-5248dba0bd00' = 'soybean'
+  '575fb0dc-31a0-4a3e-8b91-2a795a6b75a6' = 'groundnut'
+  'f7b758cf-0873-4684-9278-2708fe5e834e' = 'okra'
+  '252cbfa1-bae4-48a5-95db-21308316ae8d' = 'bottle_gourd'
 }
 
 function Get-DefaultCursorAssetsDirs {
