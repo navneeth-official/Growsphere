@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:growspehere_v1/l10n/app_localizations.dart';
@@ -7,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../core/network/image_request_headers.dart';
+import '../../core/widgets/plant_catalog_image.dart';
 import '../../core/plant_catalog_category.dart';
 import '../../data/location_crop_suggestions_repository.dart';
 import '../../domain/plant.dart';
@@ -851,31 +850,13 @@ class _PlantThumb extends StatelessWidget {
         child: Icon(Icons.eco, color: cs.primary, size: 36),
       );
     }
-    if (u.startsWith('http')) {
-      return Image.network(
-        u,
-        fit: BoxFit.cover,
-        headers: ImageRequestHeaders.standard,
-        errorBuilder: (_, __, ___) => ColoredBox(
-          color: cs.primary.withValues(alpha: 0.15),
-          child: Icon(Icons.eco, color: cs.primary, size: 36),
-        ),
-      );
-    }
-    final f = File(u);
-    if (f.existsSync()) {
-      return Image.file(
-        f,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => ColoredBox(
-          color: cs.primary.withValues(alpha: 0.15),
-          child: Icon(Icons.eco, color: cs.primary, size: 36),
-        ),
-      );
-    }
-    return ColoredBox(
-      color: cs.primary.withValues(alpha: 0.15),
-      child: Icon(Icons.eco, color: cs.primary, size: 36),
+    return plantCatalogImage(
+      u,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => ColoredBox(
+        color: cs.primary.withValues(alpha: 0.15),
+        child: Icon(Icons.eco, color: cs.primary, size: 36),
+      ),
     );
   }
 }

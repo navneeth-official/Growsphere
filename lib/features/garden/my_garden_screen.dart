@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:growspehere_v1/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../core/network/image_request_headers.dart';
+import '../../core/widgets/plant_catalog_image.dart';
 import '../../core/theme/grow_colors.dart';
 import '../../data/weather_repository.dart';
 import '../../domain/grow_enums.dart';
@@ -630,26 +628,9 @@ class _GardenPlantCard extends ConsumerWidget {
         child: const Icon(Icons.spa),
       );
     }
-    if (url.startsWith('http')) {
-      return ClipOval(
-        child: Image.network(
-          url,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          headers: ImageRequestHeaders.standard,
-          errorBuilder: (_, __, ___) => Container(
-            width: size,
-            height: size,
-            color: cs.surfaceContainerHighest,
-            child: const Icon(Icons.broken_image),
-          ),
-        ),
-      );
-    }
     return ClipOval(
-      child: Image.file(
-        File(url),
+      child: plantCatalogImage(
+        url,
         width: size,
         height: size,
         fit: BoxFit.cover,

@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:growspehere_v1/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/farm_plan_bootstrap.dart';
-import '../../core/network/image_request_headers.dart';
+import '../../core/widgets/plant_catalog_image.dart';
 import '../../core/theme/grow_colors.dart';
 import '../../domain/grow_enums.dart';
 import '../../domain/grow_session.dart';
@@ -158,18 +156,11 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
                   borderRadius: BorderRadius.circular(12),
                   child: AspectRatio(
                     aspectRatio: 16 / 9,
-                    child: plant.imageUrl!.startsWith('http')
-                        ? Image.network(
-                            plant.imageUrl!,
-                            fit: BoxFit.cover,
-                            headers: ImageRequestHeaders.standard,
-                            errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image)),
-                          )
-                        : Image.file(
-                            File(plant.imageUrl!),
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image)),
-                          ),
+                    child: plantCatalogImage(
+                      plant.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image)),
+                    ),
                   ),
                 ),
               if (plant.imageUrl != null && plant.imageUrl!.isNotEmpty) const SizedBox(height: 16),
