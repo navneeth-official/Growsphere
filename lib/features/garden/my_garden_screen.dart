@@ -123,6 +123,8 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
       await _loadTip(null);
     }
   }
+
+  Future<void> _loadTip(WeatherSnapshot? w) async {
     final plants = ref.read(gardenListProvider);
     if (plants.isEmpty) {
       setState(() => _gardenTip = null);
