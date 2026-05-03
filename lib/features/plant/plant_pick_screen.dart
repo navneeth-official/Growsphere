@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../core/network/image_request_headers.dart';
 import '../../core/widgets/plant_catalog_image.dart';
 import '../../core/plant_catalog_category.dart';
 import '../../data/location_crop_suggestions_repository.dart';
@@ -142,10 +141,9 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                         child: SizedBox(
                           width: 60,
                           height: 60,
-                          child: Image.network(
+                          child: plantCatalogImage(
                             PlantCatalogCategory.coverImageUrl(categoryId),
                             fit: BoxFit.cover,
-                            headers: ImageRequestHeaders.standard,
                             errorBuilder: (_, __, ___) =>
                                 ColoredBox(color: cs.primary.withValues(alpha: 0.35)),
                           ),
@@ -605,10 +603,9 @@ class _CategoryHeroCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.network(
+                plantCatalogImage(
                   coverImageUrl,
                   fit: BoxFit.cover,
-                  headers: ImageRequestHeaders.standard,
                   errorBuilder: (_, __, ___) => ColoredBox(
                     color: cs.primary.withValues(alpha: 0.45),
                     child: Icon(Icons.eco, size: 48, color: cs.onPrimary.withValues(alpha: 0.9)),

@@ -19,23 +19,19 @@ abstract final class PlantCatalogCategory {
         _ => 'Browse',
       };
 
-  /// Hero / carousel cover per browse shelf (Wikimedia Commons thumbnails — reliable hotlinking).
+  /// Hero / carousel cover per browse shelf — bundled under [assets/images/categories/].
+  ///
+  /// Replace these files with your own art (e.g. PNG) and update extensions here if needed:
+  /// `category_all`, `category_vegetables`, `category_fruits`, `category_kharif`, `category_rabi`, `category_flowers_herbs`.
   static String coverImageUrl(String categoryId) {
     return switch (categoryId) {
-      all =>
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Agriculture_in_Volcano.jpg/960px-Agriculture_in_Volcano.jpg',
-      vegetables =>
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/Bright_red_tomato_and_cross_section02.jpg/960px-Bright_red_tomato_and_cross_section02.jpg',
-      fruits =>
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Pomegranates.jpg/960px-Pomegranates.jpg',
-      kharif =>
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Rice_plants_(IRRI).jpg/960px-Rice_plants_(IRRI).jpg',
-      rabi =>
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Spikes_of_wheat.jpg/960px-Spikes_of_wheat.jpg',
-      flowersHerbs =>
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Marigold_big_flower_2013.jpg/960px-Marigold_big_flower_2013.jpg',
-      _ =>
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Agriculture_in_Volcano.jpg/960px-Agriculture_in_Volcano.jpg',
+      all => 'assets/images/categories/category_all.jpg',
+      vegetables => 'assets/images/categories/category_vegetables.jpg',
+      fruits => 'assets/images/categories/category_fruits.jpg',
+      kharif => 'assets/images/categories/category_kharif.jpg',
+      rabi => 'assets/images/categories/category_rabi.jpg',
+      flowersHerbs => 'assets/images/categories/category_flowers_herbs.jpg',
+      _ => 'assets/images/categories/category_all.jpg',
     };
   }
 
