@@ -19,19 +19,18 @@ abstract final class PlantCatalogCategory {
         _ => 'Browse',
       };
 
-  /// Hero / carousel cover per browse shelf — bundled under [assets/images/categories/].
-  ///
-  /// Replace these files with your own art (e.g. PNG) and update extensions here if needed:
-  /// `category_all`, `category_vegetables`, `category_fruits`, `category_kharif`, `category_rabi`, `category_flowers_herbs`.
+  /// Hero / carousel cover per browse shelf — files in [assets/images/categories/]
+  /// from `agricultural_images_bundle` (same base names: `vegetables.png`, `fruits.png`, …).
+  /// [all] uses [all_crops.png] (copy of vegetables bundle art — add a dedicated asset anytime).
   static String coverImageUrl(String categoryId) {
     return switch (categoryId) {
-      all => 'assets/images/categories/category_all.jpg',
-      vegetables => 'assets/images/categories/category_vegetables.jpg',
-      fruits => 'assets/images/categories/category_fruits.jpg',
-      kharif => 'assets/images/categories/category_kharif.jpg',
-      rabi => 'assets/images/categories/category_rabi.jpg',
-      flowersHerbs => 'assets/images/categories/category_flowers_herbs.jpg',
-      _ => 'assets/images/categories/category_all.jpg',
+      all => 'assets/images/categories/all_crops.png',
+      vegetables => 'assets/images/categories/vegetables.png',
+      fruits => 'assets/images/categories/fruits.png',
+      kharif => 'assets/images/categories/kharif_crops.png',
+      rabi => 'assets/images/categories/rabi_crops.png',
+      flowersHerbs => 'assets/images/categories/flowers_herbs.png',
+      _ => 'assets/images/categories/all_crops.png',
     };
   }
 
