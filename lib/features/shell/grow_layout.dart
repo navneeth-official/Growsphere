@@ -15,12 +15,16 @@ class GrowLayout extends StatelessWidget {
     required this.body,
     this.innerTitle,
     this.innerActions,
+    this.floatingActionButton,
+    this.floatingActionButtonLocation,
   });
 
   final Widget body;
   /// Second row (white): back + title — matches V1 Settings / Sprinkler / Add Crop headers.
   final String? innerTitle;
   final List<Widget>? innerActions;
+  final Widget? floatingActionButton;
+  final FloatingActionButtonLocation? floatingActionButtonLocation;
 
   int? _tabIndex(String path) {
     if (path == '/garden' || path.startsWith('/garden?')) return 0;
@@ -47,8 +51,21 @@ class GrowLayout extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
+    final showPlantFab = path == '/home' || path == '/garden';
+    final fab = floatingActionButton ??
+        (showPlantFab
+            ? FloatingActionButton(
+                onPressed: () => context.go('/plants'),
+                tooltip: l.addNewPlant,
+                child: const Icon(Icons.add),
+              )
+            : null);
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      floatingActionButton: fab,
+      floatingActionButtonLocation:
+          fab != null ? (floatingActionButtonLocation ?? FloatingActionButtonLocation.endFloat) : null,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

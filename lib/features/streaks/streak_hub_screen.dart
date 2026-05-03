@@ -2,15 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../domain/badge_catalog.dart';
 import '../../domain/grow_session.dart';
 import '../../providers/providers.dart';
 import '../shell/grow_tools_sheet.dart';
-
-const _staticBadgeCopy = <String, (String title, String desc)>{
-  'badge_first_water': ('First drink', 'Logged your first watering'),
-  'badge_thriving': ('Thriving', 'Plant health reached 90% or more'),
-  'badge_task_master': ('Task master', 'Completed 20 care tasks'),
-};
 
 class StreakHubScreen extends ConsumerWidget {
   const StreakHubScreen({super.key});
@@ -20,8 +15,8 @@ class StreakHubScreen extends ConsumerWidget {
       for (final m in s.streakMilestoneDays)
         (
           'badge_streak_day_$m',
-          '$m-day streak',
-          'Reach $m consecutive perfect task days for this crop.',
+          BadgeCatalog.streakMilestoneTitle(m),
+          BadgeCatalog.descriptionFor('badge_streak_day_$m'),
         ),
     ];
   }
@@ -188,7 +183,7 @@ class StreakHubScreen extends ConsumerWidget {
             color: hasBadge ? Colors.amber.shade700 : cs.onSurfaceVariant,
           ),
           title: Text(
-            '$m perfect days',
+            BadgeCatalog.streakMilestoneTitle(m),
             style: GoogleFonts.inter(
               fontWeight: FontWeight.w700,
               color: cs.onSurface,
@@ -214,7 +209,9 @@ class StreakHubScreen extends ConsumerWidget {
         entries.add(MapEntry(t.$1, (t.$2, t.$3)));
       }
     }
-    entries.addAll(_staticBadgeCopy.entries);
+    for (final id in BadgeCatalog.allStaticBadgeIds) {
+      entries.add(MapEntry(id, (BadgeCatalog.titleFor(id), BadgeCatalog.descriptionFor(id))));
+    }
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -224,7 +221,11 @@ class StreakHubScreen extends ConsumerWidget {
         return Tooltip(
           message: m.$2,
           child: Chip(
-            avatar: Icon(earned ? Icons.emoji_events : Icons.lock_outline, size: 18),
+            avatar: Icon(
+              earned ? BadgeCatalog.iconFor(e.key) : Icons.lock_outline,
+              size: 18,
+              color: earned ? BadgeCatalog.accentFor(e.key, cs) : cs.onSurfaceVariant,
+            ),
             label: Text(
               m.$1,
               style: GoogleFonts.inter(fontSize: 12, color: cs.onSurface),
@@ -308,7 +309,7 @@ class _ArchiveCard extends StatelessWidget {
                     .map(
                       (id) => Chip(
                         label: Text(
-                          id.replaceFirst('badge_', '').replaceAll('_', ' '),
+                          BadgeCatalog.titleFor(id),
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             color: cs.onSurface,

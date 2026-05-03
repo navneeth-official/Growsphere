@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/grow_colors.dart';
+import '../../domain/badge_catalog.dart';
 import '../../domain/grow_session.dart';
 import '../../domain/grow_task.dart';
 import '../../providers/providers.dart';
@@ -75,7 +76,7 @@ class FarmStreakCard extends StatelessWidget {
                 children: streakBadges
                     .map(
                       (id) => Chip(
-                        label: Text(id.replaceFirst('badge_', '').replaceAll('_', ' '), style: GoogleFonts.inter(fontSize: 11)),
+                        label: Text(BadgeCatalog.titleFor(id), style: GoogleFonts.inter(fontSize: 11)),
                         visualDensity: VisualDensity.compact,
                         backgroundColor: cs.primaryContainer.withValues(alpha: 0.5),
                       ),

@@ -37,6 +37,15 @@ class SessionController extends Notifier<GrowSession?> {
     }
     ref.read(localDataRevisionProvider.notifier).state++;
     _router.refresh();
+    await _syncScheduledGrowNotifications();
+  }
+
+  Future<void> _syncScheduledGrowNotifications() async {
+    try {
+      await ref.read(notificationServiceProvider).rescheduleScheduledGrowReminders(
+            _storage.loadGardenListSync(),
+          );
+    } catch (_) {}
   }
 
   /// Riverpod only notifies when [state] is replaced; session fields are often mutated in place.
@@ -53,9 +62,15 @@ class SessionController extends Notifier<GrowSession?> {
     required SunlightLevel sunlight,
     required int farmPlanStartMonth1To12,
     required FarmPlanAiResult farmPlan,
+    DateTime? farmingCalendarStart,
   }) async {
     final now = DateTime.now();
-    final start = DateTime(now.year, now.month, now.day);
+    final todayNorm = GrowSession.calendarDay(now);
+    var farmStart = farmingCalendarStart == null
+        ? todayNorm
+        : GrowSession.calendarDay(farmingCalendarStart);
+    if (farmStart.isBefore(todayNorm)) farmStart = todayNorm;
+    final farmIso = farmStart.toIso8601String().split('T').first;
     final rec = GrowSession.recommendationFor(
       wateringLevel: plant.wateringLevel,
       location: location,
@@ -74,7 +89,7 @@ class SessionController extends Notifier<GrowSession?> {
       nutrientHeavy: plant.nutrientHeavy,
       location: location,
       sunlight: sunlight,
-      startedAt: start,
+      startedAt: todayNorm,
       tasks: farmPlan.tasks,
       waterLog: [],
       streak: 0,
@@ -87,6 +102,7 @@ class SessionController extends Notifier<GrowSession?> {
       wateringRecommendationText: rec,
       farmPlanStartMonth: farmPlanStartMonth1To12.clamp(1, 12),
       farmPlanJson: farmPlan.serialize(),
+      farmingStartDateIso: farmIso,
     );
     await _persist();
   }
@@ -121,6 +137,7 @@ class SessionController extends Notifier<GrowSession?> {
       sunlight: SunlightLevel.medium,
       farmPlanStartMonth1To12: month,
       farmPlan: plan,
+      farmingCalendarStart: start,
     );
   }
 
@@ -131,6 +148,7 @@ class SessionController extends Notifier<GrowSession?> {
     required SunlightLevel sunlight,
     required int farmPlanStartMonth1To12,
     required FarmPlanAiResult farmPlan,
+    DateTime? farmingCalendarStart,
   }) =>
       addGardenPlant(
         plant: plant,
@@ -138,6 +156,7 @@ class SessionController extends Notifier<GrowSession?> {
         sunlight: sunlight,
         farmPlanStartMonth1To12: farmPlanStartMonth1To12,
         farmPlan: farmPlan,
+        farmingCalendarStart: farmingCalendarStart,
       );
 
   Future<void> setActiveGardenPlant(String gardenInstanceId) async {
@@ -159,6 +178,7 @@ class SessionController extends Notifier<GrowSession?> {
   Future<WaterFeedback> logWatered() async {
     final s = state;
     if (s == null) return WaterFeedback.suboptimal;
+    if (s.farmingLockedOn(DateTime.now())) return WaterFeedback.suboptimal;
     final now = DateTime.now();
     final fb = CareTimingService.evaluate(
       now: now,
@@ -195,6 +215,7 @@ class SessionController extends Notifier<GrowSession?> {
   }) async {
     final s = state;
     if (s == null) return null;
+    if (s.farmingLockedOn(DateTime.now())) return null;
     if (overwatered && !logCareFromCalendar) {
       s.plantHealth = (s.plantHealth - 12).clamp(0, 100);
     } else if (!overwatered && secondsWatered >= (idealSecondsMid * 0.45).round()) {
@@ -256,6 +277,57 @@ class SessionController extends Notifier<GrowSession?> {
     if (s.plantHealth >= 90) add('badge_thriving');
     final done = s.tasks.where((t) => t.completed).length;
     if (done >= 20) add('badge_task_master');
+    if (s.waterLog.length >= 8) add('badge_plant_parent');
+    if (s.waterLog.length >= 15 && s.plantHealth >= 55) add('badge_water_whisperer');
+    if (s.waterLog.length >= 15 && s.plantHealth > 70) add('badge_weather_watcher');
+
+    final harvestDone =
+        s.tasks.where((t) => t.completed && t.stage == ActivityStage.harvesting).length;
+    if (harvestDone >= 5) add('badge_harvest_master');
+
+    if (s.plantHealth >= 95 && done >= 30) add('badge_garden_guru');
+    if (s.bestStreak >= 100) add('badge_centurion_streak');
+    if (done >= 40) add('badge_steady_roots');
+
+    final feedingDone =
+        s.tasks.where((t) => t.completed && t.stage == ActivityStage.fertilizing).length;
+    if (feedingDone >= 8) add('badge_pollinator_pal');
+
+    final seedingDone =
+        s.tasks.where((t) => t.completed && t.stage == ActivityStage.seeding).length;
+    if (seedingDone >= 10) add('badge_seed_scientist');
+
+    final soilTasks = s.tasks.where((t) => t.stage == ActivityStage.soilPrep).toList();
+    if (soilTasks.isNotEmpty && soilTasks.every((t) => t.completed)) {
+      add('badge_soil_savior');
+    }
+
+    if (s.plantHealth >= 85 && done >= 25) add('badge_disease_detective');
+    if (done >= 12 && s.plantHealth >= 80 && s.plantHealth <= 95) add('badge_rain_ready');
+
+    if (s.nutrientHeavy && done >= 20) add('badge_compost_champion');
+
+    if (s.harvestDurationDays >= 90 && s.streak >= 5) add('badge_canopy_king');
+
+    if (s.harvestDurationDays < 45 && s.streak >= 3) add('badge_speed_grower');
+
+    final nameLow = s.plantName.toLowerCase();
+    if ((nameLow.contains('micro') || s.plantId.contains('micro')) && s.streak >= 5) {
+      add('badge_microgreen_master');
+    }
+
+    if (s.sunlight == SunlightLevel.high && s.plantHealth >= 88) add('badge_sun_chaser');
+
+    if ((s.location == GrowLocationType.balcony || s.location == GrowLocationType.indoor) &&
+        s.streak >= 7) {
+      add('badge_urban_farmer');
+    }
+
+    final distinctTaskDays = <String>{};
+    for (final t in s.tasks.where((x) => x.completed)) {
+      distinctTaskDays.add(_dayKey(t.dueDate));
+    }
+    if (distinctTaskDays.length >= 10) add('badge_night_owl_farmer');
   }
 
   /// +1 streak only when every task due that calendar day is done; [creditDay] is the due date (calendar day).
@@ -264,7 +336,7 @@ class SessionController extends Notifier<GrowSession?> {
     final key = _dayKey(creditDay);
     if (s.lastStreakCreditDayKey == key) return false;
 
-    final start = DateTime(s.startedAt.year, s.startedAt.month, s.startedAt.day);
+    final start = s.effectiveFarmingStart;
     final y = creditDay.subtract(const Duration(days: 1));
     if (y.isBefore(start)) {
       s.streak = 1;
@@ -287,6 +359,7 @@ class SessionController extends Notifier<GrowSession?> {
   Future<int> completeTask(String taskId) async {
     final s = state;
     if (s == null) return 0;
+    if (s.farmingLockedOn(DateTime.now())) return 0;
     GrowTask? t;
     for (final x in s.tasks) {
       if (x.id == taskId) {
@@ -348,6 +421,9 @@ class SessionController extends Notifier<GrowSession?> {
     state = null;
     await _storage.saveGardenList([]);
     await _storage.setActiveGardenInstanceId(null);
+    try {
+      await ref.read(notificationServiceProvider).cancelScheduledGrowReminders();
+    } catch (_) {}
     ref.read(localDataRevisionProvider.notifier).state++;
     _router.refresh();
   }

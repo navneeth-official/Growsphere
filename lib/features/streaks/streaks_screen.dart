@@ -4,30 +4,28 @@ import 'package:growspehere_v1/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../domain/badge_catalog.dart';
 import '../../domain/grow_session.dart';
 import '../../providers/providers.dart';
 import '../shell/grow_tools_sheet.dart';
 
-const _staticBadgeMeta = <String, (String title, String desc)>{
-  'badge_first_water': ('First drink', 'Logged your first watering'),
-  'badge_thriving': ('Thriving', 'Plant health 90% or more'),
-  'badge_task_master': ('Task master', 'Completed 20 care tasks'),
-};
-
 List<MapEntry<String, (String title, String desc)>> _badgeEntriesForSession(GrowSession s) {
   final out = <MapEntry<String, (String, String)>>[];
   for (final m in s.streakMilestoneDays) {
+    final id = 'badge_streak_day_$m';
     out.add(
       MapEntry(
-        'badge_streak_day_$m',
+        id,
         (
-          '$m-day streak',
-          'Reach $m consecutive perfect task days for this crop.',
+          BadgeCatalog.streakMilestoneTitle(m),
+          BadgeCatalog.descriptionFor(id),
         ),
       ),
     );
   }
-  out.addAll(_staticBadgeMeta.entries);
+  for (final id in BadgeCatalog.allStaticBadgeIds) {
+    out.add(MapEntry(id, (BadgeCatalog.titleFor(id), BadgeCatalog.descriptionFor(id))));
+  }
   return out;
 }
 

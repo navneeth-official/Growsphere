@@ -4,6 +4,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../domain/grow_session.dart';
 import '../../domain/grow_task.dart';
 
 /// Local reminders at 07:00 and 17:00. Replace with FCM topics when Firebase is added.
@@ -355,6 +356,63 @@ class NotificationService {
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       );
+    }
+  }
+
+  static const _schedGrowBaseId = 16100;
+  static const _schedGrowMaxSlots = 520;
+
+  /// Clears one-shot “countdown to planned farming start” notifications.
+  Future<void> cancelScheduledGrowReminders() async {
+    for (var i = 0; i < _schedGrowMaxSlots; i++) {
+      await _plugin.cancel(_schedGrowBaseId + i);
+    }
+  }
+
+  /// Daily 09:00 reminders until each scheduled grow’s [GrowSession.effectiveFarmingStart].
+  Future<void> rescheduleScheduledGrowReminders(List<GrowSession> garden) async {
+    await cancelScheduledGrowReminders();
+    final loc = tz.local;
+    final nowLocal = tz.TZDateTime.now(loc);
+    final today = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
+
+    final android = AndroidNotificationDetails(
+      _channelFarm,
+      'Scheduled grows',
+      channelDescription: 'Reminders before your planned farming start date',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    );
+    const ios = DarwinNotificationDetails(presentAlert: true, presentSound: false);
+    final details = NotificationDetails(android: android, iOS: ios);
+
+    var slot = 0;
+    for (final s in garden) {
+      if (!s.farmingLockedOn(DateTime.now())) continue;
+      final start = s.effectiveFarmingStart;
+      final daysTotal = start.difference(today).inDays;
+      if (daysTotal <= 0) continue;
+
+      for (var d = 0; d <= daysTotal && d < 60; d++) {
+        if (slot >= _schedGrowMaxSlots) return;
+        final day = today.add(Duration(days: d));
+        var at = tz.TZDateTime(loc, day.year, day.month, day.day, 9, 0);
+        if (!at.isAfter(nowLocal)) continue;
+        final daysLeft = start.difference(day).inDays;
+        final body = daysLeft <= 0
+            ? '${s.plantName}: farming starts today — open Growsphere to unlock tasks.'
+            : '${s.plantName}: farming starts in $daysLeft day(s).';
+        await _plugin.zonedSchedule(
+          _schedGrowBaseId + slot,
+          'Growsphere — upcoming grow',
+          body,
+          at,
+          details,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        );
+        slot++;
+      }
     }
   }
 

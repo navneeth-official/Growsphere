@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../core/theme/grow_colors.dart';
+import '../../domain/grow_session.dart';
 import '../../domain/grow_task.dart';
 import '../../providers/providers.dart';
+import 'perfect_day_streak_dialog.dart';
 
 DateTime _dOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -33,7 +34,9 @@ class GrowTaskCheckboxTile extends ConsumerWidget {
     if (task == null) return const SizedBox.shrink();
 
     final due = _dOnly(task.dueDate);
-    final editable = _isToday(due) && !task.completed;
+    final locked = session.farmingLockedOn(DateTime.now());
+    final editable = !locked && _isToday(due) && !task.completed;
+    final cs = Theme.of(context).colorScheme;
     return CheckboxListTile(
       dense: true,
       value: task.completed,
@@ -43,9 +46,8 @@ class GrowTaskCheckboxTile extends ConsumerWidget {
               final inc = await ref.read(sessionControllerProvider.notifier).completeTask(taskId);
               if (!context.mounted) return;
               if (inc == 2) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Perfect day — streak +1. Check badges in Streaks.')),
-                );
+                final streak = ref.read(sessionControllerProvider)?.streak ?? 0;
+                await showPerfectDayStreakDialog(context, streakDays: streak);
               } else if (inc == 1) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Task saved')));
               }
@@ -60,7 +62,7 @@ class GrowTaskCheckboxTile extends ConsumerWidget {
       ),
       subtitle: Text(
         'Scheduled: ${due.month}/${due.day}/${due.year} · reminder ${task.dueHour}:00',
-        style: GoogleFonts.inter(fontSize: 12, color: GrowColors.gray600),
+        style: GoogleFonts.inter(fontSize: 12, color: cs.onSurfaceVariant),
       ),
     );
   }

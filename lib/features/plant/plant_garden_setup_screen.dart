@@ -35,22 +35,44 @@ class PlantGardenSetupScreen extends ConsumerStatefulWidget {
 class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen> {
   GrowLocationType _loc = GrowLocationType.balcony;
   SunlightLevel _sun = SunlightLevel.medium;
-  int _farmStartMonth = DateTime.now().month;
+  late DateTime _farmStartDate;
   bool _busy = false;
 
   @override
   void initState() {
     super.initState();
+    final today = GrowSession.calendarDay(DateTime.now());
+    _farmStartDate = today;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final m = ref.read(growStorageProvider).farmPlanStartMonthForPlant(widget.plantId);
-      if (m != null && mounted) setState(() => _farmStartMonth = m);
+      if (!mounted) return;
+      if (m != null) {
+        final now = DateTime.now();
+        var pick = DateTime(now.year, m, 1);
+        if (pick.isBefore(today)) pick = today;
+        setState(() => _farmStartDate = pick);
+      }
     });
+  }
+
+  Future<void> _pickFarmStartDate(BuildContext context) async {
+    if (_busy) return;
+    final today = GrowSession.calendarDay(DateTime.now());
+    final initial = _farmStartDate.isBefore(today) ? today : _farmStartDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: today,
+      lastDate: today.add(const Duration(days: 730)),
+    );
+    if (picked != null && mounted) {
+      setState(() => _farmStartDate = GrowSession.calendarDay(picked));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final loc = MaterialLocalizations.of(context);
     final async = ref.watch(_setupPlantProvider(widget.plantId));
     return async.when(
       data: (plant) {
@@ -141,23 +163,32 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 16),
-              Text(l.farmMonthLabel, style: Theme.of(context).textTheme.titleSmall),
+              Text('When does farming start?', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 6),
+              Text(
+                'Pick today or a future date. Future starts stay in your garden as scheduled until that day.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
               const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                value: _farmStartMonth,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.45)),
                 ),
-                items: List.generate(12, (i) {
-                  final m = i + 1;
-                  final d = DateTime(2000, m);
-                  return DropdownMenuItem(
-                    value: m,
-                    child: Text(loc.formatMonthYear(d)),
-                  );
-                }),
-                onChanged: _busy ? null : (v) => setState(() => _farmStartMonth = v ?? 1),
+                leading: Icon(Icons.calendar_month, color: Theme.of(context).colorScheme.primary),
+                title: Text(
+                  MaterialLocalizations.of(context).formatFullDate(_farmStartDate),
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16),
+                ),
+                subtitle: Text(
+                  'Tap to change',
+                  style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
+                trailing: const Icon(Icons.edit_calendar_outlined),
+                onTap: _busy ? null : () => _pickFarmStartDate(context),
               ),
               const SizedBox(height: 24),
               Text(l.locationLabel, style: Theme.of(context).textTheme.titleSmall),
@@ -200,25 +231,26 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
                         setState(() => _busy = true);
                         try {
                           final storage = ref.read(growStorageProvider);
-                          await storage.setFarmPlanStartMonth(plant.id, _farmStartMonth);
+                          final farmMonth = _farmStartDate.month;
+                          await storage.setFarmPlanStartMonth(plant.id, farmMonth);
                           ref.read(localDataRevisionProvider.notifier).state++;
                           final repo = ref.read(geminiFarmPlanRepositoryProvider);
                           final rawPlan = await FarmPlanBootstrap.loadOrBuild(
                             repo: repo,
                             plant: plant,
-                            farmStartMonth1To12: _farmStartMonth,
+                            farmStartMonth1To12: farmMonth,
                             location: _loc,
                             sunlight: _sun,
                           );
-                          final now = DateTime.now();
-                          final start = DateTime(now.year, now.month, now.day);
-                          final plan = FarmPlanBootstrap.anchorToGrowStart(rawPlan, start);
+                          final farmDay = GrowSession.calendarDay(_farmStartDate);
+                          final plan = FarmPlanBootstrap.anchorToGrowStart(rawPlan, farmDay);
                           await ref.read(sessionControllerProvider.notifier).addGardenPlant(
                                 plant: plant,
                                 location: _loc,
                                 sunlight: _sun,
-                                farmPlanStartMonth1To12: _farmStartMonth,
+                                farmPlanStartMonth1To12: farmMonth,
                                 farmPlan: plan,
+                                farmingCalendarStart: farmDay,
                               );
                           if (context.mounted) context.go('/garden');
                         } finally {

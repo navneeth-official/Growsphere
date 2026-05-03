@@ -33,6 +33,7 @@ class GrowSession {
     required this.wateringRecommendationText,
     required this.farmPlanStartMonth,
     required this.farmPlanJson,
+    this.farmingStartDateIso,
   });
 
   /// Stable id for this grow in the multi-plant garden list (persisted).
@@ -67,6 +68,9 @@ class GrowSession {
   /// Serialized [FarmPlanAiResult] (stages, tasks, streak milestones, summary).
   final String farmPlanJson;
 
+  /// First calendar day tasks apply (`YYYY-MM-DD`). Null = use [startedAt] date (legacy).
+  final String? farmingStartDateIso;
+
   Map<String, dynamic> toJson() => {
         'gardenInstanceId': gardenInstanceId,
         'plantId': plantId,
@@ -93,6 +97,7 @@ class GrowSession {
         'wateringRecommendationText': wateringRecommendationText,
         'farmPlanStartMonth': farmPlanStartMonth,
         'farmPlanJson': farmPlanJson,
+        if (farmingStartDateIso != null) 'farmingStartDateIso': farmingStartDateIso,
       };
 
   factory GrowSession.fromJson(Map<String, dynamic> json) {
@@ -111,6 +116,7 @@ class GrowSession {
       ).serialize();
     }
     final plantId = json['plantId'] as String;
+    final farmingIso = json['farmingStartDateIso'] as String?;
     return GrowSession(
       gardenInstanceId:
           json['gardenInstanceId'] as String? ?? 'legacy_${plantId}_${startedAt.toIso8601String()}',
@@ -148,8 +154,26 @@ class GrowSession {
       wateringRecommendationText: json['wateringRecommendationText'] as String? ?? '',
       farmPlanStartMonth: (json['farmPlanStartMonth'] as num?)?.toInt().clamp(1, 12) ?? DateTime.now().month,
       farmPlanJson: farmPlanJson,
+      farmingStartDateIso: farmingIso,
     );
   }
+
+  static DateTime calendarDay(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  /// First day the grow’s task calendar is active (legacy: [startedAt] day).
+  DateTime get effectiveFarmingStart {
+    final iso = farmingStartDateIso;
+    if (iso != null && iso.isNotEmpty) {
+      try {
+        final p = DateTime.parse(iso);
+        return calendarDay(p);
+      } catch (_) {}
+    }
+    return calendarDay(startedAt);
+  }
+
+  /// Before this calendar day, the crop is “scheduled” — UI and task completion stay off.
+  bool farmingLockedOn(DateTime now) => calendarDay(now).isBefore(effectiveFarmingStart);
 
   FarmPlanAiResult? get farmPlanOrNull => FarmPlanAiResult.tryDeserialize(farmPlanJson);
 

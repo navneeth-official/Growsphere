@@ -38,7 +38,10 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadWeatherAndTip());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadWeatherAndTip();
+      ref.read(notificationServiceProvider).rescheduleScheduledGrowReminders(ref.read(gardenListProvider));
+    });
   }
 
   Future<void> _loadWeatherAndTip() async {
@@ -387,28 +390,32 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
             )
           else
             ...garden.map(
-              (s) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _GardenPlantCard(
-                  session: s,
-                  headerGreen: headerGreen,
-                  locLabel: _locLabel(l, s.location),
-                  sunLabel: _sunLabel(l, s.sunlight),
-                  onCalendar: () async {
-                    await ref.read(sessionControllerProvider.notifier).setActiveGardenPlant(s.gardenInstanceId);
-                    if (context.mounted) context.go('/home');
-                  },
-                  onWatered: () async {
-                    await ref.read(sessionControllerProvider.notifier).setActiveGardenPlant(s.gardenInstanceId);
-                    if (context.mounted) {
-                      context.push(
-                        '/sprinkler?instanceId=${Uri.encodeComponent(s.gardenInstanceId)}'
-                        '&crop=${Uri.encodeComponent(s.plantName)}',
-                      );
-                    }
-                  },
-                ),
-              ),
+              (s) {
+                final locked = s.farmingLockedOn(DateTime.now());
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _GardenPlantCard(
+                    session: s,
+                    scheduledLocked: locked,
+                    headerGreen: headerGreen,
+                    locLabel: _locLabel(l, s.location),
+                    sunLabel: _sunLabel(l, s.sunlight),
+                    onCalendar: () async {
+                      await ref.read(sessionControllerProvider.notifier).setActiveGardenPlant(s.gardenInstanceId);
+                      if (context.mounted) context.go('/home');
+                    },
+                    onWatered: () async {
+                      await ref.read(sessionControllerProvider.notifier).setActiveGardenPlant(s.gardenInstanceId);
+                      if (context.mounted) {
+                        context.push(
+                          '/sprinkler?instanceId=${Uri.encodeComponent(s.gardenInstanceId)}'
+                          '&crop=${Uri.encodeComponent(s.plantName)}',
+                        );
+                      }
+                    },
+                  ),
+                );
+              },
             ),
         ],
       ),
@@ -454,6 +461,7 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
 class _GardenPlantCard extends ConsumerWidget {
   const _GardenPlantCard({
     required this.session,
+    required this.scheduledLocked,
     required this.headerGreen,
     required this.locLabel,
     required this.sunLabel,
@@ -462,6 +470,7 @@ class _GardenPlantCard extends ConsumerWidget {
   });
 
   final GrowSession session;
+  final bool scheduledLocked;
   final Color headerGreen;
   final String locLabel;
   final String sunLabel;
@@ -490,9 +499,31 @@ class _GardenPlantCard extends ConsumerWidget {
   }
 
   Widget _cardBody(BuildContext context, AppLocalizations l, ColorScheme cs, Plant? plant) {
+    final loc = MaterialLocalizations.of(context);
+    final startLabel = loc.formatFullDate(session.effectiveFarmingStart);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (scheduledLocked)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              children: [
+                Icon(Icons.schedule, size: 18, color: cs.tertiary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Scheduled — unlocks $startLabel',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -583,7 +614,7 @@ class _GardenPlantCard extends ConsumerWidget {
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                onPressed: onWatered,
+                onPressed: scheduledLocked ? null : onWatered,
                 icon: const Icon(Icons.water_drop, size: 18),
                 label: Text(l.iWatered),
               ),

@@ -43,12 +43,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (!mounted) return;
       final s = ref.read(sessionControllerProvider);
       if (s != null) await _syncFarmDigest(s);
+      await ref.read(notificationServiceProvider).rescheduleScheduledGrowReminders(ref.read(gardenListProvider));
     });
   }
 
   Future<void> _syncFarmDigest(GrowSession session) async {
+    if (!mounted) return;
     final n = ref.read(notificationServiceProvider);
     final storage = ref.read(growStorageProvider);
+    final loc = MaterialLocalizations.of(context);
+    final locked = session.farmingLockedOn(DateTime.now());
+    if (locked) {
+      final startLabel = loc.formatFullDate(session.effectiveFarmingStart);
+      await n.scheduleFarmTasksDigest(
+        '${session.plantName} is scheduled — farming begins on $startLabel. Morning reminders will count down until then.',
+      );
+      await n.rescheduleTaskDeadlineReminders(plantName: session.plantName, tasks: session.tasks);
+      await n.scheduleSensorReadingReminders();
+      await n.scheduleEodIncompleteReminder();
+      await n.cancelPendingTaskNudges();
+      return;
+    }
     final today = DateTime.now();
     final d = DateTime(today.year, today.month, today.day);
     final lines = session.tasks.where((t) {
@@ -92,6 +107,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           await n.cancelSensorReadingReminders();
           await n.cancelEodIncompleteReminder();
           await n.cancelPendingTaskNudges();
+          await n.cancelScheduledGrowReminders();
         });
       }
     });
@@ -127,7 +143,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       );
     }
-    final startM = storage.farmPlanStartMonthForPlant(session.plantId) ?? session.startedAt.month;
+    final startM = storage.farmPlanStartMonthForPlant(session.plantId) ?? session.farmPlanStartMonth;
+    final cs = Theme.of(context).colorScheme;
+    final locked = session.farmingLockedOn(DateTime.now());
+    final loc = MaterialLocalizations.of(context);
     return GrowLayout(
       body: ListView(
         controller: _scroll,
@@ -137,6 +156,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             session.plantName,
             style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700),
           ),
+          if (locked) ...[
+            const SizedBox(height: 12),
+            Card(
+              color: cs.primaryContainer.withValues(alpha: 0.55),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Icon(Icons.event_available, color: cs.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Scheduled grow — tasks unlock on ${loc.formatFullDate(session.effectiveFarmingStart)}.',
+                        style: GoogleFonts.inter(fontSize: 13, height: 1.35, color: cs.onSurface),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           FarmPlanMonthCards(
             startMonth1To12: startM,
@@ -171,10 +211,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: 16),
           Text(l.wateringRecommendation, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          Text(session.wateringRecommendationText, style: GoogleFonts.inter(color: GrowColors.gray600)),
+          Text(
+            session.wateringRecommendationText,
+            style: GoogleFonts.inter(color: cs.onSurfaceVariant),
+          ),
           const SizedBox(height: 20),
           FilledButton.icon(
-            onPressed: () => _onWatered(context),
+            onPressed: locked ? null : () => _onWatered(context),
             icon: const Icon(Icons.water_drop),
             label: Text(l.iWatered),
           ),
@@ -198,6 +241,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _onWatered(BuildContext context) async {
+    final s = ref.read(sessionControllerProvider);
+    if (s != null && s.farmingLockedOn(DateTime.now())) return;
     await ref.read(growStorageProvider).setPendingSprinklerFromCalendar(true);
     if (!context.mounted) return;
     context.push('/sprinkler?autoWater=1');

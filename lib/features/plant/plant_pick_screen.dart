@@ -87,11 +87,7 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
   String _categoryOf(Plant p) => PlantCatalogCategory.inferForPlantId(p.id);
 
   List<Plant> _applyBrowse(List<Plant> plants) {
-    final shelf = PlantCatalogCategory.carouselShelfOrder[_catPageIndex];
     var list = plants.where((p) => p.matchesQuery(_q)).toList();
-    if (shelf != PlantCatalogCategory.all) {
-      list = list.where((p) => _categoryOf(p) == shelf).toList();
-    }
     if (_difficultyFilter != null) {
       list = list.where((p) => p.difficulty.toLowerCase() == _difficultyFilter).toList();
     }
@@ -358,19 +354,40 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                 ),
                 SliverToBoxAdapter(
                   child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                    child: FilledButton.icon(
+                      onPressed: _onAddNewPlant,
+                      icon: const Icon(Icons.add, size: 20),
+                      label: Text(l.addNewPlant),
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
                     padding: const EdgeInsets.fromLTRB(0, 16, 0, 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'Browse by category',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: cs.onSurface,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Browse by category',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: cs.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Tap a shelf to explore — the full catalog stays below.',
+                                style: GoogleFonts.inter(
+                                    fontSize: 12, color: cs.onSurfaceVariant, height: 1.3),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -516,16 +533,6 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                     ),
                   ),
                 ],
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                    child: FilledButton.icon(
-                      onPressed: _onAddNewPlant,
-                      icon: const Icon(Icons.add, size: 20),
-                      label: Text(l.addNewPlant),
-                    ),
-                  ),
-                ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
                   sliver: SliverList(
