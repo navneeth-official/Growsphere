@@ -36,6 +36,12 @@ const bundledHandCropPlantIds = <String>[
   'groundnut',
   'okra',
   'bottle_gourd',
+  'rose',
+  'marigold',
+  'sunflower',
+  'mint',
+  'basil',
+  'coriander',
 ];
 
 String bundledHandCropPngPath(String plantId) =>

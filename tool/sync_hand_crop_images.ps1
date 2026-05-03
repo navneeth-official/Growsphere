@@ -28,6 +28,7 @@ $dest = (Join-Path $PSScriptRoot '..\assets\images\crops\hands' | Resolve-Path).
 # Order: chilli, tomato, brinjal, cucumber, french beans, lettuce, pumpkin, strawberries,
 #        banana, mangoes, citrus, wheat, green peas, garlic, onions, potato, carrot, radish, spinach
 # Batch 2 (chat order): rice, maize, soyabean, ground nut, okra, bottle gourd -> ids soybean, groundnut, bottle_gourd
+# Batch 3: rose, marigold, sunflower, mint, basil, coriander
 $cursorMap = [ordered]@{
   'c72c1349-f3fb-4abe-a5e9-66fb55c68b2b' = 'chilli'
   '3de4dd21-82d9-45c8-8613-8d9384abb50f' = 'tomato'
@@ -54,6 +55,12 @@ $cursorMap = [ordered]@{
   '575fb0dc-31a0-4a3e-8b91-2a795a6b75a6' = 'groundnut'
   'f7b758cf-0873-4684-9278-2708fe5e834e' = 'okra'
   '252cbfa1-bae4-48a5-95db-21308316ae8d' = 'bottle_gourd'
+  '72874225-2146-4008-9348-a1c271f1157c' = 'rose'
+  '7d6a7d7b-c14a-4f14-ab6a-ccd683a5eae4' = 'marigold'
+  '48fcc8e4-d94e-49ad-87dd-84c980f40ee6' = 'sunflower'
+  '0d3eee73-ee92-4654-9de5-d45a5c97b7a3' = 'mint'
+  '4de66087-8541-4f44-84ba-83b66e39f465' = 'basil'
+  'db101063-7520-419e-a5bd-2f73661eb7a3' = 'coriander'
 }
 
 function Get-DefaultCursorAssetsDirs {

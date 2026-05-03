@@ -15,9 +15,9 @@ const _kBundledAssetByPlantId = <String, String>{
   'peas': 'assets/images/crops/hands/peas.png',
   'spinach': 'assets/images/crops/hands/spinach.png',
   'lettuce': 'assets/images/crops/hands/lettuce.png',
-  'coriander': 'assets/images/crops/coriander.jpg',
-  'mint': 'assets/images/crops/mint.jpg',
-  'basil': 'assets/images/crops/basil.jpg',
+  'coriander': 'assets/images/crops/hands/coriander.png',
+  'mint': 'assets/images/crops/hands/mint.png',
+  'basil': 'assets/images/crops/hands/basil.png',
   'wheat': 'assets/images/crops/hands/wheat.png',
   'rice': 'assets/images/crops/hands/rice.png',
   'maize': 'assets/images/crops/hands/maize.png',
@@ -32,18 +32,15 @@ const _kBundledAssetByPlantId = <String, String>{
   'banana': 'assets/images/crops/hands/banana.png',
   'mango': 'assets/images/crops/hands/mango.png',
   'citrus': 'assets/images/crops/hands/citrus.png',
-  'sunflower': 'assets/images/crops/sunflower.jpg',
+  'sunflower': 'assets/images/crops/hands/sunflower.png',
   'soybean': 'assets/images/crops/hands/soybean.png',
   'groundnut': 'assets/images/crops/hands/groundnut.png',
+  'rose': 'assets/images/crops/hands/rose.png',
+  'marigold': 'assets/images/crops/hands/marigold.png',
 };
 
 /// Stable Wikimedia thumbnails for catalog entries without a bundled asset (no API key).
-const _kWikimediaByPlantId = <String, String>{
-  'rose':
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Rosa_rubiginosa_1.jpg/640px-Rosa_rubiginosa_1.jpg',
-  'marigold':
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Tagetes_erecta%2C_2015-07-17%2C_Sm%C3%B6gen%2C_01.jpg/640px-Tagetes_erecta%2C_2015-07-17%2C_Sm%C3%B6gen%2C_01.jpg',
-};
+const _kWikimediaByPlantId = <String, String>{};
 
 Plant plantWithStableImage(Plant p) {
   final bundled = _kBundledAssetByPlantId[p.id];
