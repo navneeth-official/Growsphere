@@ -29,7 +29,9 @@ class _PestScreenState extends ConsumerState<PestScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    const guideBg = Color(0xFFE8F5E9);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final guideBg = dark ? cs.surfaceContainerLowest : const Color(0xFFE8F5E9);
+    final cardBg = dark ? cs.surfaceContainerHigh : Colors.white;
 
     return GrowToolShell(
       child: Padding(
@@ -80,7 +82,7 @@ class _PestScreenState extends ConsumerState<PestScreen> {
                     elevation: open ? 4 : 2,
                     shadowColor: Colors.black26,
                     borderRadius: BorderRadius.circular(14),
-                    color: Colors.white,
+                    color: cardBg,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(14),
                       onTap: () => setState(() => _expandedIndex = open ? null : i),
@@ -152,6 +154,8 @@ class _PestScreenState extends ConsumerState<PestScreen> {
                                   label: Text('Typical impact: ${e.severityHint}'),
                                   visualDensity: VisualDensity.compact,
                                   padding: EdgeInsets.zero,
+                                  backgroundColor: cs.surfaceContainerHighest,
+                                  side: BorderSide(color: cs.outline.withValues(alpha: 0.35)),
                                 ),
                               ),
                             ],
@@ -172,6 +176,7 @@ class _PestScreenState extends ConsumerState<PestScreen> {
               if (_lastReport != null) ...[
                 const SizedBox(height: 12),
                 Card(
+                  color: cs.surfaceContainerHighest,
                   child: Padding(
                     padding: const EdgeInsets.all(14),
                     child: Column(

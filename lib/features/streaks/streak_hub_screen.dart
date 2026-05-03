@@ -8,25 +8,86 @@ import '../../providers/providers.dart';
 import '../../widgets/badge_medallion.dart';
 import '../shell/grow_tools_sheet.dart';
 
-class StreakHubScreen extends ConsumerWidget {
-  const StreakHubScreen({super.key});
+List<(String id, String title, String desc)> _milestoneBadges(GrowSession s) {
+  return [
+    for (final m in s.streakMilestoneDays)
+      (
+        'badge_streak_day_$m',
+        BadgeCatalog.streakMilestoneTitle(m),
+        BadgeCatalog.descriptionFor('badge_streak_day_$m'),
+      ),
+  ];
+}
 
-  static List<(String id, String title, String desc)> _milestoneBadges(GrowSession s) {
-    return [
-      for (final m in s.streakMilestoneDays)
-        (
-          'badge_streak_day_$m',
-          BadgeCatalog.streakMilestoneTitle(m),
-          BadgeCatalog.descriptionFor('badge_streak_day_$m'),
-        ),
-    ];
+class StreakHubScreen extends ConsumerStatefulWidget {
+  const StreakHubScreen({super.key, this.focusGardenInstanceId});
+
+  /// When set (e.g. from profile badge tap), scrolls to this grow’s archive/active card.
+  final String? focusGardenInstanceId;
+
+  @override
+  ConsumerState<StreakHubScreen> createState() => _StreakHubScreenState();
+}
+
+class _StreakHubScreenState extends ConsumerState<StreakHubScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToFocus());
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void didUpdateWidget(covariant StreakHubScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusGardenInstanceId != widget.focusGardenInstanceId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToFocus());
+    }
+  }
+
+  void _scrollToFocus() {
+    final id = widget.focusGardenInstanceId?.trim();
+    if (id == null || id.isEmpty) return;
+    final ctx = GlobalObjectKey<Object>('grow_$id').currentContext;
+    if (ctx != null && mounted) {
+      Scrollable.ensureVisible(
+        ctx,
+        alignment: 0.12,
+        duration: const Duration(milliseconds: 340),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.watch(localDataRevisionProvider);
     final cs = Theme.of(context).colorScheme;
     final session = ref.watch(sessionControllerProvider);
-    final archives = ref.watch(growStorageProvider).loadGrowArchives();
+    final rawArchives = ref.watch(growStorageProvider).loadGrowArchives();
+    final fid = widget.focusGardenInstanceId?.trim();
+
+    final archives = List<Map<String, dynamic>>.from(rawArchives);
+    if (fid != null && fid.isNotEmpty) {
+      String? idOf(Map<String, dynamic> raw) {
+        try {
+          return GrowSession.fromJson(Map<String, dynamic>.from(raw)).gardenInstanceId;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      archives.sort((a, b) {
+        final ma = idOf(a) == fid;
+        final mb = idOf(b) == fid;
+        if (ma && !mb) return -1;
+        if (!ma && mb) return 1;
+        final da = a['archivedAt']?.toString() ?? '';
+        final db = b['archivedAt']?.toString() ?? '';
+        return db.compareTo(da);
+      });
+    }
+
+    final highlightActive = fid != null && fid.isNotEmpty && session?.gardenInstanceId == fid;
 
     return GrowSubpageScaffold(
       title: 'Streaks & history',
@@ -48,7 +109,13 @@ class StreakHubScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 8),
-            _sessionSummaryCard(context, session),
+            if (fid != null && fid.isNotEmpty && session.gardenInstanceId == fid)
+              KeyedSubtree(
+                key: GlobalObjectKey<Object>('grow_$fid'),
+                child: _sessionSummaryCard(context, session, highlight: highlightActive),
+              )
+            else
+              _sessionSummaryCard(context, session, highlight: highlightActive),
             const SizedBox(height: 12),
             Text(
               'Milestone targets',
@@ -116,20 +183,37 @@ class StreakHubScreen extends ConsumerWidget {
               ),
             )
           else
-            ...archives.map((raw) => _ArchiveCard(raw: raw)),
+            ...archives.map((raw) {
+              GrowSession s;
+              try {
+                s = GrowSession.fromJson(Map<String, dynamic>.from(raw));
+              } catch (_) {
+                return const SizedBox.shrink();
+              }
+              final sk = fid != null &&
+                      fid.isNotEmpty &&
+                      s.gardenInstanceId == fid &&
+                      session?.gardenInstanceId != fid
+                  ? GlobalObjectKey<Object>('grow_$fid')
+                  : null;
+              return _ArchiveCard(raw: raw, scrollKey: sk);
+            }),
         ],
       ),
     );
   }
 
-  Widget _sessionSummaryCard(BuildContext context, GrowSession s) {
+  Widget _sessionSummaryCard(BuildContext context, GrowSession s, {required bool highlight}) {
     final cs = Theme.of(context).colorScheme;
     return Card(
-      elevation: 0,
-      color: cs.surfaceContainerHighest,
+      elevation: highlight ? 2 : 0,
+      color: highlight ? Color.alphaBlend(cs.primary.withValues(alpha: 0.12), cs.surfaceContainerHighest) : cs.surfaceContainerHighest,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: cs.outline.withValues(alpha: 0.35)),
+        side: BorderSide(
+          color: highlight ? cs.primary : cs.outline.withValues(alpha: 0.35),
+          width: highlight ? 2 : 1,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -247,9 +331,10 @@ class StreakHubScreen extends ConsumerWidget {
 }
 
 class _ArchiveCard extends StatelessWidget {
-  const _ArchiveCard({required this.raw});
+  const _ArchiveCard({required this.raw, this.scrollKey});
 
   final Map<String, dynamic> raw;
+  final Key? scrollKey;
 
   @override
   Widget build(BuildContext context) {
@@ -261,7 +346,7 @@ class _ArchiveCard extends StatelessWidget {
       return const SizedBox.shrink();
     }
     final at = raw['archivedAt']?.toString() ?? '';
-    return Padding(
+    final body = Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Card(
         elevation: 0,
@@ -334,5 +419,9 @@ class _ArchiveCard extends StatelessWidget {
         ),
       ),
     );
+    if (scrollKey != null) {
+      return KeyedSubtree(key: scrollKey, child: body);
+    }
+    return body;
   }
 }

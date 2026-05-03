@@ -176,7 +176,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     });
   }
 
-  Widget _buildBoard(ColorScheme cs) {
+  Widget _buildBoardContent(ColorScheme cs) {
     final f = _future;
     if (f == null) {
       return const _MarketAiLoadingCard();
@@ -188,13 +188,18 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           return const _MarketAiLoadingCard();
         }
         if (snap.hasError) {
-          return Center(child: Text('${snap.error}', textAlign: TextAlign.center));
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Text('${snap.error}', textAlign: TextAlign.center),
+          );
         }
         final board = snap.data!;
         final rows = board.rows;
         final last = rows.isNotEmpty ? rows.first.updated : DateTime.now();
         final timeStr = '${last.hour.toString().padLeft(2, '0')}:${last.minute.toString().padLeft(2, '0')}';
-        return ListView(
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Region: ${_effectiveRegion}',
@@ -284,11 +289,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return GrowToolShell(
-      child: Padding(
+      child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        children: [
             Card(
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -473,9 +476,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            Expanded(child: _buildBoard(cs)),
-          ],
-        ),
+            _buildBoardContent(cs),
+        ],
       ),
     );
   }

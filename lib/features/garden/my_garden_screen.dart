@@ -488,12 +488,13 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
                     onWatered: () async {
                       await ref.read(sessionControllerProvider.notifier).setActiveGardenPlant(s.gardenInstanceId);
                       await ref.read(growStorageProvider).setPendingSprinklerFromCalendarFor(s.gardenInstanceId, true);
-                      if (context.mounted) {
-                        context.push(
-                          '/sprinkler?autoWater=1&instanceId=${Uri.encodeComponent(s.gardenInstanceId)}'
-                          '&crop=${Uri.encodeComponent(s.plantName)}',
-                        );
-                      }
+                      if (!context.mounted) return;
+                      final already = ref.read(growStorageProvider).sprinklerOnFor(s.gardenInstanceId);
+                      final auto = already ? '0' : '1';
+                      context.push(
+                        '/sprinkler?autoWater=$auto&instanceId=${Uri.encodeComponent(s.gardenInstanceId)}'
+                        '&crop=${Uri.encodeComponent(s.plantName)}',
+                      );
                     },
                   ),
                 );
@@ -572,15 +573,17 @@ class _GardenPlantCard extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: asyncPlant.when(
-          data: (plant) => _cardBody(context, l, cs, plant),
+          data: (plant) => _cardBody(context, ref, l, cs, plant),
           loading: () => const SizedBox(height: 120, child: Center(child: CircularProgressIndicator())),
-          error: (_, __) => _cardBody(context, l, cs, null),
+          error: (_, __) => _cardBody(context, ref, l, cs, null),
         ),
       ),
     );
   }
 
-  Widget _cardBody(BuildContext context, AppLocalizations l, ColorScheme cs, Plant? plant) {
+  Widget _cardBody(BuildContext context, WidgetRef ref, AppLocalizations l, ColorScheme cs, Plant? plant) {
+    ref.watch(localDataRevisionProvider);
+    final valveOn = ref.read(growStorageProvider).sprinklerOnFor(session.gardenInstanceId);
     final loc = MaterialLocalizations.of(context);
     final startLabel = loc.formatFullDate(session.effectiveFarmingStart);
     return Column(
@@ -697,8 +700,8 @@ class _GardenPlantCard extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 onPressed: scheduledLocked ? null : onWatered,
-                icon: const Icon(Icons.water_drop, size: 18),
-                label: Text(l.iWatered),
+                icon: Icon(valveOn ? Icons.hourglass_top : Icons.water_drop, size: 18),
+                label: Text(valveOn ? '${l.watering}…' : l.iWatered),
               ),
             ),
             const SizedBox(width: 10),

@@ -70,6 +70,8 @@ class SessionController extends Notifier<GrowSession?> {
     required int farmPlanStartMonth1To12,
     required FarmPlanAiResult farmPlan,
     DateTime? farmingCalendarStart,
+    /// When set (e.g. AI watering note), used instead of [GrowSession.recommendationFor].
+    String? wateringRecommendationText,
   }) async {
     final now = DateTime.now();
     final todayNorm = GrowSession.calendarDay(now);
@@ -78,11 +80,13 @@ class SessionController extends Notifier<GrowSession?> {
         : GrowSession.calendarDay(farmingCalendarStart);
     if (farmStart.isBefore(todayNorm)) farmStart = todayNorm;
     final farmIso = farmStart.toIso8601String().split('T').first;
-    final rec = GrowSession.recommendationFor(
-      wateringLevel: plant.wateringLevel,
-      location: location,
-      sun: sunlight,
-    );
+    final rec = (wateringRecommendationText?.trim().isNotEmpty ?? false)
+        ? wateringRecommendationText!.trim()
+        : GrowSession.recommendationFor(
+            wateringLevel: plant.wateringLevel,
+            location: location,
+            sun: sunlight,
+          );
     state = GrowSession(
       gardenInstanceId: _newGardenInstanceId(plant),
       plantId: plant.id,
@@ -160,6 +164,7 @@ class SessionController extends Notifier<GrowSession?> {
     required int farmPlanStartMonth1To12,
     required FarmPlanAiResult farmPlan,
     DateTime? farmingCalendarStart,
+    String? wateringRecommendationText,
   }) =>
       addGardenPlant(
         plant: plant,
@@ -168,6 +173,7 @@ class SessionController extends Notifier<GrowSession?> {
         farmPlanStartMonth1To12: farmPlanStartMonth1To12,
         farmPlan: farmPlan,
         farmingCalendarStart: farmingCalendarStart,
+        wateringRecommendationText: wateringRecommendationText,
       );
 
   Future<void> setActiveGardenPlant(String gardenInstanceId) async {

@@ -53,15 +53,18 @@ class _SprinklerScreenState extends ConsumerState<SprinklerScreen> {
       }
       if (!mounted) return;
       if (widget.autoWater) {
-        final gid = ref.read(sessionControllerProvider)?.gardenInstanceId ??
+        final effectiveGid = ref.read(sessionControllerProvider)?.gardenInstanceId ??
             widget.gardenInstanceId ??
             '';
-        if (gid.isEmpty) return;
-        await ref.read(sprinklerRepositoryProvider).setOn(
-              gid,
-              true,
-              targetWateringSeconds: (_durationMinutes * 60).round(),
-            );
+        if (effectiveGid.isEmpty) return;
+        final storage = ref.read(growStorageProvider);
+        if (!storage.sprinklerOnFor(effectiveGid)) {
+          await ref.read(sprinklerRepositoryProvider).setOn(
+                effectiveGid,
+                true,
+                targetWateringSeconds: (_durationMinutes * 60).round(),
+              );
+        }
       }
     });
   }

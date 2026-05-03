@@ -10,9 +10,10 @@ abstract class SprinklerRepository {
 }
 
 class LocalSprinklerRepository implements SprinklerRepository {
-  LocalSprinklerRepository(this._storage);
+  LocalSprinklerRepository(this._storage, [this._onMutate]);
 
   final GrowStorage _storage;
+  final void Function()? _onMutate;
 
   @override
   bool isOnFor(String gardenInstanceId) => _storage.sprinklerOnFor(gardenInstanceId);
@@ -23,5 +24,6 @@ class LocalSprinklerRepository implements SprinklerRepository {
   @override
   Future<void> setOn(String gardenInstanceId, bool on, {int? targetWateringSeconds}) async {
     await _storage.setSprinklerOnFor(gardenInstanceId, on, targetWateringSeconds: targetWateringSeconds);
+    _onMutate?.call();
   }
 }

@@ -139,11 +139,6 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
           );
         }
         final cs = Theme.of(context).colorScheme;
-        final rec = GrowSession.recommendationFor(
-          wateringLevel: plant.wateringLevel,
-          location: _loc,
-          sun: _sun,
-        );
         final growthMonths = _growthMonthsFromHarvestDays(plant.harvestDurationDays);
         final pid = plant.id;
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -285,17 +280,15 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
                 },
               ),
               const SizedBox(height: 24),
-              Text(l.wateringRecommendation, style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 8),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Text(rec, style: Theme.of(context).textTheme.bodyMedium),
-                ),
-              ),
-              const SizedBox(height: 12),
               Text('AI watering note', style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 6),
+              Text(
+                'Based on your location and sunlight. This text is saved as your crop’s watering tip when you add to the garden.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 8),
               Card(
                 color: cs.primaryContainer.withValues(alpha: 0.35),
                 child: Padding(
@@ -340,6 +333,13 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
                           );
                           final farmDay = GrowSession.calendarDay(_farmStartDate);
                           final plan = FarmPlanBootstrap.anchorToGrowStart(rawPlan, farmDay);
+                          final fallbackRec = GrowSession.recommendationFor(
+                            wateringLevel: plant.wateringLevel,
+                            location: _loc,
+                            sun: _sun,
+                          );
+                          final waterTxt =
+                              (_aiWaterNote?.trim().isNotEmpty ?? false) ? _aiWaterNote!.trim() : fallbackRec;
                           await ref.read(sessionControllerProvider.notifier).addGardenPlant(
                                 plant: plant,
                                 location: _loc,
@@ -347,6 +347,7 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
                                 farmPlanStartMonth1To12: farmMonth,
                                 farmPlan: plan,
                                 farmingCalendarStart: farmDay,
+                                wateringRecommendationText: waterTxt,
                               );
                           if (context.mounted) context.go('/garden');
                         } finally {

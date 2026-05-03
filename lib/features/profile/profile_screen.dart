@@ -61,17 +61,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       cropLines.add('${s.plantName} · best streak ${s.bestStreak} · current ${s.streak}');
     }
 
-    final badgeIds = <String>{...journey};
-    for (final s in garden) {
-      badgeIds.addAll(s.earnedBadgeIds);
-    }
+    final archiveSessions = <GrowSession>[];
     for (final raw in archives) {
       try {
-        final s = GrowSession.fromJson(Map<String, dynamic>.from(raw));
-        badgeIds.addAll(s.earnedBadgeIds);
+        archiveSessions.add(GrowSession.fromJson(Map<String, dynamic>.from(raw)));
       } catch (_) {}
     }
-    final sortedBadges = badgeIds.toList()..sort();
+    final activeIds = garden.map((e) => e.gardenInstanceId).toSet();
+    final pastSeasons = archiveSessions.where((s) => !activeIds.contains(s.gardenInstanceId)).toList();
 
     return GrowLayout(
       innerTitle: 'My profile',
@@ -176,34 +173,134 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          if (sortedBadges.isEmpty)
+          if (journey.isEmpty && garden.every((s) => s.earnedBadgeIds.isEmpty) && pastSeasons.every((s) => s.earnedBadgeIds.isEmpty))
             Text(
               'Grow plants to unlock badges — they also appear under the bell.',
               style: GoogleFonts.inter(fontSize: 13, color: cs.onSurfaceVariant, height: 1.4),
             )
-          else
-            Wrap(
-              spacing: 10,
-              runSpacing: 12,
-              children: sortedBadges.map((id) {
-                return SizedBox(
-                  width: 88,
-                  child: Column(
-                    children: [
-                      BadgeMedallion(badgeId: id, size: 56, unlocked: true),
-                      const SizedBox(height: 6),
-                      Text(
-                        BadgeCatalog.titleFor(id),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: cs.onSurface),
+          else ...[
+            if (journey.isNotEmpty) ...[
+              Text(
+                'Journey',
+                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: cs.onSurface),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Milestones across your profile',
+                style: GoogleFonts.inter(fontSize: 12, color: cs.onSurfaceVariant),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 10,
+                runSpacing: 12,
+                children: journey.map((id) {
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => context.push('/streak-hub'),
+                    child: SizedBox(
+                      width: 88,
+                      child: Column(
+                        children: [
+                          BadgeMedallion(badgeId: id, size: 56, unlocked: true),
+                          const SizedBox(height: 6),
+                          Text(
+                            BadgeCatalog.titleFor(id),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: cs.onSurface),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+            ],
+            for (final s in garden) ...[
+              if (s.earnedBadgeIds.isNotEmpty) ...[
+                Text(
+                  s.plantName,
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: cs.onSurface),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Active grow · tap a badge for streak history',
+                  style: GoogleFonts.inter(fontSize: 11, color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 12,
+                  children: (s.earnedBadgeIds.toList()..sort()).map((id) {
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => context.push('/streak-hub?focus=${Uri.encodeComponent(s.gardenInstanceId)}'),
+                      child: SizedBox(
+                        width: 88,
+                        child: Column(
+                          children: [
+                            BadgeMedallion(badgeId: id, size: 56, unlocked: true),
+                            const SizedBox(height: 6),
+                            Text(
+                              BadgeCatalog.titleFor(id),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: cs.onSurface),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ],
+            for (final s in pastSeasons) ...[
+              if (s.earnedBadgeIds.isNotEmpty) ...[
+                Text(
+                  s.plantName,
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: cs.onSurface),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Past season · tap a badge for streak history',
+                  style: GoogleFonts.inter(fontSize: 11, color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 12,
+                  children: (s.earnedBadgeIds.toList()..sort()).map((id) {
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => context.push('/streak-hub?focus=${Uri.encodeComponent(s.gardenInstanceId)}'),
+                      child: SizedBox(
+                        width: 88,
+                        child: Column(
+                          children: [
+                            BadgeMedallion(badgeId: id, size: 56, unlocked: true),
+                            const SizedBox(height: 6),
+                            Text(
+                              BadgeCatalog.titleFor(id),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: cs.onSurface),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ],
+          ],
         ],
       ),
     );

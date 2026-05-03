@@ -147,6 +147,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final cs = Theme.of(context).colorScheme;
     final locked = session.farmingLockedOn(DateTime.now());
     final loc = MaterialLocalizations.of(context);
+    final valveOn = storage.sprinklerOnFor(session.gardenInstanceId);
     return GrowLayout(
       body: ListView(
         controller: _scroll,
@@ -218,8 +219,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: 20),
           FilledButton.icon(
             onPressed: locked ? null : () => _onWatered(context),
-            icon: const Icon(Icons.water_drop),
-            label: Text(l.iWatered),
+            icon: Icon(valveOn ? Icons.hourglass_top : Icons.water_drop),
+            label: Text(valveOn ? '${l.watering}…' : l.iWatered),
           ),
           const SizedBox(height: 24),
           ActivityFarmingStagesSection(
@@ -246,8 +247,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (s.farmingLockedOn(DateTime.now())) return;
     await ref.read(growStorageProvider).setPendingSprinklerFromCalendarFor(s.gardenInstanceId, true);
     if (!context.mounted) return;
+    final already = ref.read(growStorageProvider).sprinklerOnFor(s.gardenInstanceId);
+    final auto = already ? '0' : '1';
     context.push(
-      '/sprinkler?autoWater=1&instanceId=${Uri.encodeComponent(s.gardenInstanceId)}'
+      '/sprinkler?autoWater=$auto&instanceId=${Uri.encodeComponent(s.gardenInstanceId)}'
       '&crop=${Uri.encodeComponent(s.plantName)}',
     );
   }

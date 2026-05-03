@@ -105,7 +105,9 @@ final reverseGeocodeServiceProvider = Provider<ReverseGeocodeService>((ref) => R
 
 final sprinklerRepositoryProvider = Provider<SprinklerRepository>((ref) {
   final s = ref.watch(growStorageProvider);
-  return LocalSprinklerRepository(s);
+  return LocalSprinklerRepository(s, () {
+    ref.read(localDataRevisionProvider.notifier).state++;
+  });
 });
 
 final routeRefreshProvider = ChangeNotifierProvider<RouteRefreshNotifier>((ref) => RouteRefreshNotifier());

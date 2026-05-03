@@ -94,7 +94,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
       GoRoute(path: '/weather', builder: (_, __) => const WeatherScreen()),
       GoRoute(path: '/streaks', builder: (_, __) => const StreaksScreen()),
-      GoRoute(path: '/streak-hub', builder: (_, __) => const StreakHubScreen()),
+      GoRoute(
+        path: '/streak-hub',
+        builder: (_, s) => StreakHubScreen(focusGardenInstanceId: s.uri.queryParameters['focus']),
+      ),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
       GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
     ],

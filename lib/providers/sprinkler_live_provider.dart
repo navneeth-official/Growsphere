@@ -207,6 +207,7 @@ class SprinklerLiveNotifier extends AutoDisposeNotifier<SprinklerLiveState> {
 
   Future<void> _autoStopAtTarget(GrowStorage storage, String gardenInstanceId, SprinklerLiveState live) async {
     await storage.setSprinklerOnFor(gardenInstanceId, false);
+    ref.read(localDataRevisionProvider.notifier).state++;
     final plan = _plan;
     final over = live.quality == SprinklerTimingQuality.over;
     final fromCal = storage.pendingSprinklerFromCalendarFor(gardenInstanceId);
