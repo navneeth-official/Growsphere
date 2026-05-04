@@ -4,7 +4,8 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.2.2 <4.0.0'
+  # speech_to_text 7.3.x requires Dart >=3.3.0; keeps pub from resolving 6.x on older SDK floors.
+  sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -26,10 +27,10 @@ dependencies:
   google_fonts: ^6.2.1
   google_generative_ai: ^0.4.7
   url_launcher: ^6.3.1
-  # flutter_timezone 4.x requires Dart >=3.4.0; 3.x works with this app's SDK floor (3.2.2+).
+  # flutter_timezone 4.x requires Dart >=3.4.0; 3.x works with this SDK range.
   flutter_timezone: '>=3.0.1 <4.0.0'
-  # 6.6.x fails Android Kotlin build (v1 embedding Registrar removed in current Flutter/AGP).
-  speech_to_text: ^7.3.0
+  # 6.6.x: Android v1 embedding (Registrar). Pin 7.3.0 so a stale lockfile cannot pull 6.x.
+  speech_to_text: 7.3.0
   path: ^1.9.0
 
 dev_dependencies:
