@@ -50,7 +50,7 @@ All string values must be plain text: no markdown asterisks, no # headings, no b
           '''You are an agricultural vision assistant for GrowSphere.
 Analyze the photograph on its own merits. The user may be growing something completely different in the app — ignore app session.
 $_jsonKeys''',
-          '''$memBlockREFERENCE_CATALOG (optional, do not assume the photo matches any crop listed):
+          '''${memBlock}REFERENCE_CATALOG (optional, do not assume the photo matches any crop listed):
 $rag
 
 Task: From the image only — identify the plant or crop if reasonably possible, assess health, likely diseases or abiotic stress, signs of nutrient deficiency, and pest-related damage. Be conservative where the image is unclear.
@@ -62,7 +62,7 @@ Identify likely pests, life stages, and damage from the image alone. Never inven
 If uncertain, say so in summary and keep recommendations general (monitoring, sanitation, expert ID).
 ${PestGuideEntry.referenceBlockForAi()}
 $_jsonKeys''',
-          '''$memBlockREFERENCE_CATALOG (optional pest notes for common crops — use only if consistent with visible evidence):
+          '''${memBlock}REFERENCE_CATALOG (optional pest notes for common crops — use only if consistent with visible evidence):
 $rag
 
 Task: Map findings to one of the guide pests when justified; otherwise use a neutral label like "Unconfirmed pest damage".
@@ -73,7 +73,7 @@ JSON only:''',
           '''You are a botany-aware crop assistant.
 Identify species, cultivar group, or closest alternatives from the image. If the image is not a plant, say so clearly.
 $_jsonKeys''',
-          '''$memBlockREFERENCE_CATALOG (optional common names — image wins over catalog):
+          '''${memBlock}REFERENCE_CATALOG (optional common names — image wins over catalog):
 $rag
 
 Task: Species / common name identification, confidence, and brief cultivation or look-alike disclaimer.

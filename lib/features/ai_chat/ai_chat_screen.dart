@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:growspehere_v1/l10n/app_localizations.dart';
@@ -203,7 +204,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         (isUser: _msgs[i].user, text: _msgs[i].text),
     ];
 
-    List<int>? imageBytes;
+    Uint8List? imageBytes;
     String? imageMime;
     if (relPath != null) {
       final root = await getApplicationDocumentsDirectory();
