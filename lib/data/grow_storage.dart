@@ -33,6 +33,9 @@ const _kProfileDisplayName = 'profile_display_name';
 const _kProfilePhotoPath = 'profile_photo_path';
 const _kProfileEmail = 'profile_email';
 const _kProfilePhone = 'profile_phone';
+const _kAiToolContexts = 'ai_tool_contexts_json_v1';
+const _kAiChatThreads = 'ai_chat_threads_json_v1';
+const _kAiChatActiveId = 'ai_chat_active_thread_id';
 
 /// Local key-value store. Swap for Firestore sync layer later.
 class GrowStorage {
@@ -610,6 +613,146 @@ class GrowStorage {
       await box.delete(_kProfilePhone);
     } else {
       await box.put(_kProfilePhone, phone.trim());
+    }
+  }
+
+  // --- AI tool memory (per-tool rolling context for Gemini prompts) ---
+
+  Map<String, List<Map<String, dynamic>>> _loadToolContextsMap() {
+    final raw = box.get(_kAiToolContexts) as String?;
+    if (raw == null || raw.isEmpty) return {};
+    try {
+      final m = jsonDecode(raw) as Map<String, dynamic>;
+      return m.map((k, v) {
+        final list = (v as List<dynamic>).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        return MapEntry(k, list);
+      });
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Short block to prepend into tool prompts (bounded size).
+  String buildAiToolContextBlock(String toolId, {int maxChars = 3200}) {
+    final turns = _loadToolContextsMap()[toolId];
+    if (turns == null || turns.isEmpty) return '';
+    final buf = StringBuffer();
+    for (final t in turns) {
+      final role = t['role'] as String? ?? '';
+      final text = (t['text'] as String? ?? '').trim();
+      if (text.isEmpty) continue;
+      buf.writeln(role == 'user' ? 'User:' : 'Assistant:');
+      buf.writeln(text);
+      buf.writeln();
+      if (buf.length > maxChars) break;
+    }
+    var s = buf.toString().trim();
+    if (s.length > maxChars) s = s.substring(s.length - maxChars);
+    return s;
+  }
+
+  Future<void> recordAiToolExchange(String toolId, String userLine, String assistantLine) async {
+    final all = _loadToolContextsMap();
+    final list = List<Map<String, dynamic>>.from(all[toolId] ?? []);
+    String clip(String s) => s.length > 1200 ? '${s.substring(0, 1200)}…' : s;
+    list.add({'role': 'user', 'text': clip(userLine)});
+    list.add({'role': 'model', 'text': clip(assistantLine)});
+    while (list.length > 24) {
+      list.removeRange(0, 2);
+    }
+    all[toolId] = list;
+    await box.put(_kAiToolContexts, jsonEncode(all));
+  }
+
+  Future<void> clearAiToolContext(String toolId) async {
+    final all = _loadToolContextsMap();
+    all.remove(toolId);
+    await box.put(_kAiToolContexts, jsonEncode(all));
+  }
+
+  Future<void> clearAllAiToolContexts() async {
+    await box.delete(_kAiToolContexts);
+  }
+
+  // --- AI chat threads (local persistence) ---
+
+  String? get activeAiChatThreadId => box.get(_kAiChatActiveId) as String?;
+
+  Future<void> setActiveAiChatThreadId(String? id) async {
+    if (id == null || id.isEmpty) {
+      await box.delete(_kAiChatActiveId);
+    } else {
+      await box.put(_kAiChatActiveId, id);
+    }
+  }
+
+  List<Map<String, dynamic>> loadAiChatThreads() {
+    final raw = box.get(_kAiChatThreads) as String?;
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> saveAiChatThreads(List<Map<String, dynamic>> threads) async {
+    while (threads.length > 40) {
+      threads.removeLast();
+    }
+    await box.put(_kAiChatThreads, jsonEncode(threads));
+  }
+
+  Future<void> appendAiChatMessage({
+    required String threadId,
+    required bool isUser,
+    required String text,
+    String? imageRelativePath,
+  }) async {
+    final threads = loadAiChatThreads();
+    final i = threads.indexWhere((e) => e['id'] == threadId);
+    if (i < 0) return;
+    final t = Map<String, dynamic>.from(threads[i]);
+    final msgs = List<Map<String, dynamic>>.from(
+      (t['msgs'] as List<dynamic>? ?? []).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+    msgs.add({
+      'u': isUser,
+      't': text,
+      if (imageRelativePath != null && imageRelativePath.isNotEmpty) 'img': imageRelativePath,
+    });
+    t['msgs'] = msgs;
+    t['at'] = DateTime.now().toIso8601String();
+    if ((t['title'] as String? ?? '').isEmpty && isUser && text.trim().isNotEmpty) {
+      final title = text.trim().length > 48 ? '${text.trim().substring(0, 45)}…' : text.trim();
+      t['title'] = title;
+    }
+    threads.removeAt(i);
+    threads.insert(0, t);
+    await saveAiChatThreads(threads);
+  }
+
+  Future<String> createAiChatThread() async {
+    final id = 'cht_${DateTime.now().microsecondsSinceEpoch}';
+    final threads = loadAiChatThreads();
+    threads.insert(0, {
+      'id': id,
+      'title': 'New chat',
+      'at': DateTime.now().toIso8601String(),
+      'msgs': <Map<String, dynamic>>[],
+    });
+    await saveAiChatThreads(threads);
+    await setActiveAiChatThreadId(id);
+    return id;
+  }
+
+  Future<void> deleteAiChatThread(String threadId) async {
+    var threads = loadAiChatThreads();
+    threads = threads.where((e) => e['id'] != threadId).toList();
+    await saveAiChatThreads(threads);
+    if (activeAiChatThreadId == threadId) {
+      await setActiveAiChatThreadId(threads.isNotEmpty ? threads.first['id'] as String? : null);
     }
   }
 }

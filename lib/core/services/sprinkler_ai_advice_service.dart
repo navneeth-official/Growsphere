@@ -55,6 +55,8 @@ class SprinklerAiPlan {
     required String plantName,
     required String wateringLevel,
     required String climateHint,
+    String? priorToolMemory,
+    Future<void> Function(String userSummary, String rawAssistantJson)? onRecordedExchange,
   }) async {
     const sys = '''
 You advise smallholder / balcony growers on manual sprinkler sessions.
@@ -64,11 +66,14 @@ Reply with ONLY valid JSON (no markdown fences) with keys:
 "rationale" (one short sentence for the grower).
 Use conservative ranges; avoid overwatering.
 ''';
-    final user =
-        'Crop: $plantName. Declared watering need: $wateringLevel. Climate/soil notes: ${climateHint.length > 400 ? climateHint.substring(0, 400) : climateHint}';
+    final hint = climateHint.length > 400 ? climateHint.substring(0, 400) : climateHint;
+    final user = '''
+${priorToolMemory != null && priorToolMemory.isNotEmpty ? 'PRIOR_TOOL_MEMORY:\n$priorToolMemory\n\n' : ''}Crop: $plantName. Declared watering need: $wateringLevel. Climate/soil notes: $hint''';
     final text = await gemini.generateText(systemInstruction: sys, userText: user);
     try {
-      return parseModelText(text);
+      final plan = parseModelText(text);
+      await onRecordedExchange?.call('$plantName / $wateringLevel', text);
+      return plan;
     } catch (_) {
       return fallback;
     }

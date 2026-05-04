@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../core/services/gemini_generative_service.dart';
+import 'ai_tool_ids.dart';
+import 'grow_storage.dart';
 
 /// Draft growing-requirements text from crop research.
 class GrowingRequirementsDraft {
@@ -20,9 +22,14 @@ class GrowingRequirementsDraft {
 
 /// Gemini-backed suggestions for add-crop "Google Research" flow.
 class GeminiCropResearchRepository {
-  GeminiCropResearchRepository({required GeminiGenerativeService gemini}) : _gemini = gemini;
+  GeminiCropResearchRepository({
+    required GeminiGenerativeService gemini,
+    required GrowStorage storage,
+  })  : _gemini = gemini,
+        _storage = storage;
 
   final GeminiGenerativeService _gemini;
+  final GrowStorage _storage;
 
   static const _jsonSystem = '''
 You are an expert agronomist for smallholder and home growers.
@@ -47,19 +54,34 @@ If the image is unclear, infer conservatively from the plant name and growth per
       user.writeln('User image reference: $imageUrlHint');
     }
 
+    final mem = _storage.buildAiToolContextBlock(AiToolIds.cropResearch);
+    final body = StringBuffer();
+    if (mem.isNotEmpty) {
+      body.writeln('PRIOR_TOOL_MEMORY (same tool, stay consistent when relevant):');
+      body.writeln(mem);
+      body.writeln();
+    }
+    body.write(user.toString());
+
     final raw = imageBytes != null && imageBytes.isNotEmpty && imageMimeType != null && imageMimeType.isNotEmpty
         ? await _gemini.generateWithImage(
             systemInstruction: _jsonSystem,
-            prompt: user.toString(),
+            prompt: body.toString(),
             imageBytes: imageBytes,
             mimeType: imageMimeType,
           )
         : await _gemini.generateText(
             systemInstruction: _jsonSystem,
-            userText: '${user.toString()}\n(No usable image bytes — rely on plant name and duration.)',
+            userText: '${body.toString()}\n(No usable image bytes — rely on plant name and duration.)',
           );
 
-    return _parseDraft(raw);
+    final draft = _parseDraft(raw);
+    await _storage.recordAiToolExchange(
+      AiToolIds.cropResearch,
+      'Basics: $plantName, ${growthMonths}mo',
+      'climate/soil/fertilizer JSON draft (${raw.length} chars)',
+    );
+    return draft;
   }
 
   Future<String> enhanceField({
@@ -80,11 +102,25 @@ Field: $label
 Plant: $plantName, growth window ~$growthMonths months.
 Rewrite or enrich the following draft to be clearer and more actionable; keep similar length (2–5 sentences).
 ''';
+    final mem = _storage.buildAiToolContextBlock(AiToolIds.cropResearch);
+    final userBlock = StringBuffer();
+    if (mem.isNotEmpty) {
+      userBlock.writeln('PRIOR_TOOL_MEMORY:');
+      userBlock.writeln(mem);
+      userBlock.writeln();
+    }
+    userBlock.write('Current draft:\n$currentText');
     final out = await _gemini.generateText(
       systemInstruction: sys,
-      userText: 'Current draft:\n$currentText',
+      userText: userBlock.toString(),
     );
-    return out.trim();
+    final trimmed = out.trim();
+    await _storage.recordAiToolExchange(
+      AiToolIds.cropResearch,
+      'Enhance $fieldKey for $plantName',
+      trimmed.length > 1500 ? '${trimmed.substring(0, 1500)}…' : trimmed,
+    );
+    return trimmed;
   }
 
   GrowingRequirementsDraft _parseDraft(String raw) {

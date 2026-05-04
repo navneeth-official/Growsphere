@@ -19,7 +19,8 @@ final _locationSuggestedPlantsProvider = FutureProvider<List<Plant>>((ref) async
   ref.watch(localDataRevisionProvider);
   final catalog = await ref.read(plantRepositoryProvider).loadAll();
   final gemini = ref.read(geminiGenerativeServiceProvider);
-  final repo = LocationCropSuggestionsRepository(gemini: gemini);
+  final storage = ref.read(growStorageProvider);
+  final repo = LocationCropSuggestionsRepository(gemini: gemini, storage: storage);
   final ids = await repo.suggestPlantIds(catalog);
   final byId = {for (final p in catalog) p.id: p};
   return ids.map((id) => byId[id]).whereType<Plant>().toList();
@@ -109,7 +110,13 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
 
   void _onAddNewPlant() => context.go('/add-crop');
 
-  void _openCategorySheet(BuildContext context, String categoryId, List<Plant> allPlants, AppLocalizations l) {
+  void _openCategorySheet(
+    BuildContext context,
+    String categoryId,
+    List<Plant> allPlants,
+    AppLocalizations l,
+    Set<String> busyPlantIds,
+  ) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final list = categoryId == PlantCatalogCategory.all
@@ -180,6 +187,7 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                     separatorBuilder: (_, __) => Divider(height: 1, color: cs.outline.withValues(alpha: 0.25)),
                     itemBuilder: (_, i) {
                       final p = list[i];
+                      final inGarden = busyPlantIds.contains(p.id);
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         leading: ClipRRect(
@@ -195,14 +203,19 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                           style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: cs.onSurface),
                         ),
                         subtitle: Text(
-                          '${p.difficulty} · ${p.harvestDurationDays} d harvest',
+                          inGarden
+                              ? 'Already in My Garden — finish or cancel that grow first'
+                              : '${p.difficulty} · ${p.harvestDurationDays} d harvest',
                           style: GoogleFonts.inter(fontSize: 13, color: cs.onSurfaceVariant),
                         ),
                         trailing: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
-                        onTap: () {
-                          Navigator.of(sheetCtx).pop();
-                          context.push('/plant-garden-setup/${p.id}');
-                        },
+                        enabled: !inGarden,
+                        onTap: inGarden
+                            ? null
+                            : () {
+                                Navigator.of(sheetCtx).pop();
+                                context.push('/plant-garden-setup/${p.id}');
+                              },
                       );
                     },
                   ),
@@ -225,6 +238,7 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
     return GrowLayout(
       body: async.when(
         data: (plants) {
+          final gardenPlantIds = ref.watch(gardenListProvider).map((e) => e.plantId).toSet();
           final customs = plants.where((p) => p.id.startsWith('custom_')).toList();
           final filtered = _applyBrowse(plants);
           return CustomScrollView(
@@ -412,7 +426,7 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                                     plantCount: count,
                                     selected: i == _catPageIndex,
                                     coverImageUrl: PlantCatalogCategory.coverImageUrl(id),
-                                    onTap: () => _openCategorySheet(context, id, plants, l),
+                                    onTap: () => _openCategorySheet(context, id, plants, l, gardenPlantIds),
                                   ),
                                 );
                               },
@@ -484,6 +498,7 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                             child: _CompactPlantCard(
                               plant: near[i],
                               monthsLabel: l.growthPeriodMonths(_monthsFromDays(near[i].harvestDurationDays)),
+                              inGarden: gardenPlantIds.contains(near[i].id),
                               onOpen: () => context.push('/plant-garden-setup/${near[i].id}'),
                             ),
                           ),
@@ -524,6 +539,7 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                           child: _CompactPlantCard(
                             plant: customs[i],
                             monthsLabel: l.growthPeriodMonths(_monthsFromDays(customs[i].harvestDurationDays)),
+                            inGarden: gardenPlantIds.contains(customs[i].id),
                             onOpen: () => context.push('/plant-garden-setup/${customs[i].id}'),
                           ),
                         ),
@@ -543,6 +559,7 @@ class _PlantPickScreenState extends ConsumerState<PlantPickScreen> {
                             plant: p,
                             monthsLabel: l.growthPeriodMonths(_monthsFromDays(p.harvestDurationDays)),
                             categoryLabel: PlantCatalogCategory.labelOf(_categoryOf(p)),
+                            inGarden: gardenPlantIds.contains(p.id),
                             onOpen: () => context.push('/plant-garden-setup/${p.id}'),
                           ),
                         );
@@ -676,21 +693,23 @@ class _CompactPlantCard extends StatelessWidget {
   const _CompactPlantCard({
     required this.plant,
     required this.monthsLabel,
+    required this.inGarden,
     required this.onOpen,
   });
 
   final Plant plant;
   final String monthsLabel;
+  final bool inGarden;
   final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Material(
-      color: cs.surfaceContainerHighest,
+      color: inGarden ? cs.surfaceContainerHighest.withValues(alpha: 0.55) : cs.surfaceContainerHighest,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        onTap: onOpen,
+        onTap: inGarden ? null : onOpen,
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsets.all(10),
@@ -698,12 +717,37 @@ class _CompactPlantCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: _PlantThumb(imageUrl: plant.imageUrl),
-                  ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: _PlantThumb(imageUrl: plant.imageUrl),
+                      ),
+                    ),
+                    if (inGarden)
+                      Positioned(
+                        left: 4,
+                        right: 4,
+                        bottom: 4,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            child: Text(
+                              'In garden',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 8),
@@ -732,12 +776,14 @@ class _PlantCard extends ConsumerWidget {
     required this.plant,
     required this.monthsLabel,
     required this.categoryLabel,
+    required this.inGarden,
     required this.onOpen,
   });
 
   final Plant plant;
   final String monthsLabel;
   final String categoryLabel;
+  final bool inGarden;
   final VoidCallback onOpen;
 
   @override
@@ -745,10 +791,10 @@ class _PlantCard extends ConsumerWidget {
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     return Material(
-      color: cs.surfaceContainerHighest,
+      color: inGarden ? cs.surfaceContainerHighest.withValues(alpha: 0.55) : cs.surfaceContainerHighest,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        onTap: onOpen,
+        onTap: inGarden ? null : onOpen,
         borderRadius: BorderRadius.circular(14),
         child: Container(
           decoration: BoxDecoration(
@@ -812,15 +858,22 @@ class _PlantCard extends ConsumerWidget {
                       monthsLabel,
                       style: GoogleFonts.inter(fontSize: 13, color: cs.onSurfaceVariant),
                     ),
+                    if (inGarden) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Already in My Garden — finish or cancel that grow to add again.',
+                        style: GoogleFonts.inter(fontSize: 12, color: cs.tertiary, fontWeight: FontWeight.w600),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     FilledButton(
-                      onPressed: onOpen,
+                      onPressed: inGarden ? null : onOpen,
                       style: FilledButton.styleFrom(
                         minimumSize: Size.zero,
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: Text(l.learnMore),
+                      child: Text(inGarden ? 'In garden' : l.learnMore),
                     ),
                   ],
                 ),

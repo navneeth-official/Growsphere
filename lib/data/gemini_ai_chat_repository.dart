@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 import '../core/services/gemini_generative_service.dart';
@@ -34,6 +36,8 @@ Formatting (critical — answers render in a plain chat bubble):
     String userText, {
     String? plantContext,
     List<AiChatPriorTurn>? priorTurns,
+    Uint8List? imageBytes,
+    String? imageMimeType,
   }) async {
     final prior = priorTurns ?? const [];
     final rag = await _rag.buildContextBlock();
@@ -57,9 +61,31 @@ $userText
       }
     }
 
-    final out = prior.isEmpty
-        ? await _gemini.generateText(systemInstruction: _system, userText: body)
-        : await _gemini.generateChatReply(systemInstruction: _system, history: history, message: body);
+    final bytes = imageBytes;
+    final mime = imageMimeType;
+    final hasImage = bytes != null && bytes.isNotEmpty && mime != null && mime.isNotEmpty;
+
+    final String out;
+    if (prior.isEmpty && !hasImage) {
+      out = await _gemini.generateText(systemInstruction: _system, userText: body);
+    } else if (prior.isEmpty && hasImage) {
+      out = await _gemini.generateWithImage(
+        systemInstruction: _system,
+        prompt: body,
+        imageBytes: bytes!,
+        mimeType: mime!,
+      );
+    } else if (hasImage) {
+      out = await _gemini.generateChatReplyMultimodal(
+        systemInstruction: _system,
+        history: history,
+        message: body,
+        imageBytes: bytes,
+        imageMimeType: mime,
+      );
+    } else {
+      out = await _gemini.generateChatReply(systemInstruction: _system, history: history, message: body);
+    }
 
     final cleaned = _stripStrayMarkdown(out.isEmpty ? 'No response from model. Check API key and model id.' : out);
     return cleaned;

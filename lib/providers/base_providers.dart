@@ -56,13 +56,13 @@ final geminiCropResearchServiceProvider = Provider<GeminiGenerativeService?>((re
 final geminiCropResearchRepositoryProvider = Provider<GeminiCropResearchRepository?>((ref) {
   final g = ref.watch(geminiCropResearchServiceProvider);
   if (g == null) return null;
-  return GeminiCropResearchRepository(gemini: g);
+  return GeminiCropResearchRepository(gemini: g, storage: ref.watch(growStorageProvider));
 });
 
 final geminiFarmPlanRepositoryProvider = Provider<GeminiFarmPlanRepository?>((ref) {
   final g = ref.watch(geminiGenerativeServiceProvider);
   if (g == null) return null;
-  return GeminiFarmPlanRepository(gemini: g);
+  return GeminiFarmPlanRepository(gemini: g, storage: ref.watch(growStorageProvider));
 });
 
 final plantRagContextServiceProvider = Provider<PlantRagContextService>((ref) {
@@ -75,8 +75,9 @@ final plantRagContextServiceProvider = Provider<PlantRagContextService>((ref) {
 final marketRepositoryProvider = Provider<MarketPriceRepository>((ref) {
   final g = ref.watch(geminiGenerativeServiceProvider);
   final rag = ref.watch(plantRagContextServiceProvider);
+  final storage = ref.watch(growStorageProvider);
   if (g != null) {
-    return GeminiMarketPriceRepository(gemini: g, rag: rag);
+    return GeminiMarketPriceRepository(gemini: g, rag: rag, storage: storage);
   }
   return MockMarketPriceRepository();
 });
@@ -94,7 +95,11 @@ final diseaseRepositoryProvider = Provider<DiseaseAnalysisRepository>((ref) {
   final g = ref.watch(geminiGenerativeServiceProvider);
   final rag = ref.watch(plantRagContextServiceProvider);
   if (g != null) {
-    return GeminiDiseaseAnalysisRepository(gemini: g, rag: rag);
+    return GeminiDiseaseAnalysisRepository(
+      gemini: g,
+      rag: rag,
+      storage: ref.watch(growStorageProvider),
+    );
   }
   return StubDiseaseAnalysisRepository();
 });

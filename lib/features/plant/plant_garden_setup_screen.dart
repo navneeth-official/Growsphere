@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/farm_plan_bootstrap.dart';
 import '../../core/widgets/plant_catalog_image.dart';
 import '../../core/theme/grow_colors.dart';
+import '../../data/ai_tool_ids.dart';
 import '../../domain/grow_enums.dart';
 import '../../domain/grow_session.dart';
 import '../../domain/plant.dart';
@@ -73,20 +74,31 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
       SunlightLevel.medium => 'medium',
       SunlightLevel.high => 'high',
     };
+    final storage = ref.read(growStorageProvider);
+    final mem = storage.buildAiToolContextBlock(AiToolIds.plantWaterSetup);
     try {
+      final userText = '''
+${mem.isNotEmpty ? 'PRIOR_TOOL_MEMORY:\n$mem\n\n' : ''}Plant: ${plant.name}. Catalog watering tag: ${plant.wateringLevel}. Location: $locName. Sunlight: $sunName.
+Give practical water rhythm (how often to check soil, signs of dry vs soggy).''';
       final text = await g.generateText(
         systemInstruction:
             'You advise on watering frequency for one potted/balcony crop. Output 2–3 short sentences only. Plain text. '
             'Do not invent weather numbers. Base advice only on plant water need, location type, and sunlight level given.',
-        userText:
-            'Plant: ${plant.name}. Catalog watering tag: ${plant.wateringLevel}. Location: $locName. Sunlight: $sunName. '
-            'Give practical water rhythm (how often to check soil, signs of dry vs soggy).',
+        userText: userText,
       );
       if (!mounted) return;
       setState(() {
         _aiWaterNote = text.trim().isEmpty ? null : text.trim();
         _aiWaterLoading = false;
       });
+      final trimmed = text.trim();
+      if (trimmed.isNotEmpty) {
+        await storage.recordAiToolExchange(
+          AiToolIds.plantWaterSetup,
+          'Watering ${plant.name} $locName/$sunName',
+          trimmed,
+        );
+      }
     } catch (_) {
       if (mounted) setState(() => _aiWaterLoading = false);
     }
@@ -365,6 +377,16 @@ class _PlantGardenSetupScreenState extends ConsumerState<PlantGardenSetupScreen>
                                 wateringRecommendationText: waterTxt,
                               );
                           if (context.mounted) context.go('/garden');
+                        } on StateError catch (e) {
+                          if (e.message == 'DUPLICATE_ACTIVE_GROW' && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'This crop is already in your garden. Finish or cancel that grow from My Garden first.',
+                                ),
+                              ),
+                            );
+                          }
                         } finally {
                           if (mounted) setState(() => _busy = false);
                         }

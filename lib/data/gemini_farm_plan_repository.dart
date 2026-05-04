@@ -5,12 +5,19 @@ import '../core/services/gemini_generative_service.dart';
 import '../domain/activity_stage.dart';
 import '../domain/farm_plan_ai_result.dart';
 import '../domain/grow_task.dart';
+import 'ai_tool_ids.dart';
+import 'grow_storage.dart';
 
 /// Asks Gemini for a JSON farm plan (stages, tasks, streak milestones) for a crop.
 class GeminiFarmPlanRepository {
-  GeminiFarmPlanRepository({required GeminiGenerativeService gemini}) : _gemini = gemini;
+  GeminiFarmPlanRepository({
+    required GeminiGenerativeService gemini,
+    required GrowStorage storage,
+  })  : _gemini = gemini,
+        _storage = storage;
 
   final GeminiGenerativeService _gemini;
+  final GrowStorage _storage;
 
   static const _sys = '''
 You are an agronomy assistant. Output ONLY valid JSON (no markdown fences) with this shape:
@@ -41,8 +48,9 @@ Rules:
     required String locationName,
     required String sunlightName,
   }) async {
+    final mem = _storage.buildAiToolContextBlock(AiToolIds.farmPlan);
     final user = '''
-Plant: $plantName
+${mem.isNotEmpty ? 'PRIOR_TOOL_MEMORY (same tool, earlier requests — stay consistent when relevant):\n$mem\n\n' : ''}Plant: $plantName
 Total grow days (harvest window): $harvestDays
 Planned farm start month (1-12): $farmStartMonth1To12
 Location: $locationName
@@ -54,7 +62,15 @@ Build the JSON plan.
 ''';
     try {
       final raw = await _gemini.generateText(systemInstruction: _sys, userText: user);
-      return _parse(raw, harvestDays);
+      final parsed = _parse(raw, harvestDays);
+      if (parsed != null) {
+        await _storage.recordAiToolExchange(
+          AiToolIds.farmPlan,
+          'Plan request: $plantName, ${harvestDays}d, $locationName / $sunlightName',
+          raw.length > 2000 ? '${raw.substring(0, 2000)}…' : raw,
+        );
+      }
+      return parsed;
     } catch (_) {
       return null;
     }

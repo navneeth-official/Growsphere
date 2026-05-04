@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import '../core/services/gemini_generative_service.dart';
 import '../core/services/plant_rag_context_service.dart';
+import 'ai_tool_ids.dart';
+import 'grow_storage.dart';
 import 'market_price_repository.dart';
 
 /// Uses Gemini with RAG + general knowledge to **estimate** indicative wholesale-style prices.
@@ -10,11 +12,14 @@ class GeminiMarketPriceRepository implements MarketPriceRepository {
   GeminiMarketPriceRepository({
     required GeminiGenerativeService gemini,
     required PlantRagContextService rag,
+    required GrowStorage storage,
   })  : _gemini = gemini,
-        _rag = rag;
+        _rag = rag,
+        _storage = storage;
 
   final GeminiGenerativeService _gemini;
   final PlantRagContextService _rag;
+  final GrowStorage _storage;
 
   static const _system = '''
 You output only JSON (no markdown fences): one JSON object with two keys:
@@ -54,8 +59,9 @@ related crops; not limited to any fixed database.
     final rag = await _rag.buildContextBlock();
     final now = DateTime.now();
     final geo = geoHint == null || geoHint.isEmpty ? '(not provided)' : geoHint;
+    final mem = _storage.buildAiToolContextBlock(AiToolIds.marketPrices);
     final prompt = '''
-USER_REGION (primary): $regionLabel
+${mem.isNotEmpty ? 'PRIOR_TOOL_MEMORY:\n$mem\n\n' : ''}USER_REGION (primary): $regionLabel
 DEVICE_GEO_HINT: $geo
 
 RAG_CONTEXT (catalog typicalPricePerKg — weak priors only):
@@ -65,7 +71,13 @@ Timestamp: ${now.toIso8601String()}
 Return the JSON object only.
 ''';
     final raw = await _gemini.generateText(systemInstruction: _system, userText: prompt);
-    return _parseBoard(raw, now);
+    final board = _parseBoard(raw, now);
+    await _storage.recordAiToolExchange(
+      AiToolIds.marketPrices,
+      'Board $regionLabel',
+      raw.length > 1800 ? '${raw.substring(0, 1800)}…' : raw,
+    );
+    return board;
   }
 
   @override
@@ -78,8 +90,9 @@ Return the JSON object only.
     final now = DateTime.now();
     final geo = geoHint == null || geoHint.isEmpty ? '(not provided)' : geoHint;
     final crop = cropQuery.trim().isEmpty ? 'unspecified crop' : cropQuery.trim();
+    final mem = _storage.buildAiToolContextBlock(AiToolIds.marketCropSearch);
     final prompt = '''
-TARGET_CROP: $crop
+${mem.isNotEmpty ? 'PRIOR_TOOL_MEMORY:\n$mem\n\n' : ''}TARGET_CROP: $crop
 USER_REGION (primary): $regionLabel
 DEVICE_GEO_HINT: $geo
 
@@ -90,16 +103,23 @@ Timestamp: ${now.toIso8601String()}
 Return the JSON object only.
 ''';
     final raw = await _gemini.generateText(systemInstruction: _systemCropSearch, userText: prompt);
-    return _parseBoard(raw, now);
+    final board = _parseBoard(raw, now);
+    await _storage.recordAiToolExchange(
+      AiToolIds.marketCropSearch,
+      'Search crop $crop in $regionLabel',
+      raw.length > 1800 ? '${raw.substring(0, 1800)}…' : raw,
+    );
+    return board;
   }
 
   @override
   Future<List<String>> suggestCropNames(String partial) async {
     final t = partial.trim();
     if (t.length < 2) return [];
+    final mem = _storage.buildAiToolContextBlock(AiToolIds.marketNameSuggest);
     final raw = await _gemini.generateText(
       systemInstruction: _systemSuggest.replaceAll('PARTIAL', t),
-      userText: 'Partial search: $t',
+      userText: '${mem.isNotEmpty ? 'PRIOR_TOOL_MEMORY:\n$mem\n\n' : ''}Partial search: $t',
     );
     try {
       final start = raw.indexOf('{');
@@ -108,7 +128,9 @@ Return the JSON object only.
       final root = jsonDecode(raw.substring(start, end + 1)) as Map<String, dynamic>;
       final s = root['suggestions'];
       if (s is! List) return [];
-      return s.map((e) => '$e').where((e) => e.trim().isNotEmpty).take(8).toList();
+      final out = s.map((e) => '$e').where((e) => e.trim().isNotEmpty).take(8).toList();
+      await _storage.recordAiToolExchange(AiToolIds.marketNameSuggest, 'Suggest names: $t', raw);
+      return out;
     } catch (_) {
       return [];
     }

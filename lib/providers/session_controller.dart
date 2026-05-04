@@ -73,6 +73,10 @@ class SessionController extends Notifier<GrowSession?> {
     /// When set (e.g. AI watering note), used instead of [GrowSession.recommendationFor].
     String? wateringRecommendationText,
   }) async {
+    final already = _storage.loadGardenListSync().any((e) => e.plantId == plant.id);
+    if (already) {
+      throw StateError('DUPLICATE_ACTIVE_GROW');
+    }
     final now = DateTime.now();
     final todayNorm = GrowSession.calendarDay(now);
     var farmStart = farmingCalendarStart == null
@@ -529,6 +533,32 @@ class SessionController extends Notifier<GrowSession?> {
     } catch (_) {}
     ref.read(localDataRevisionProvider.notifier).state++;
     _router.refresh();
+  }
+
+  /// Removes one grow from the garden list, archives it, and frees the catalog [plantId] for a new grow.
+  Future<void> removeGardenGrow(String gardenInstanceId, {required bool markCompleted}) async {
+    final list = List<GrowSession>.from(_storage.loadGardenListSync());
+    final idx = list.indexWhere((e) => e.gardenInstanceId == gardenInstanceId);
+    if (idx < 0) return;
+    final s = list.removeAt(idx);
+    final archiveJson = Map<String, dynamic>.from(s.toJson());
+    archiveJson['archivedAs'] = markCompleted ? 'completed' : 'cancelled';
+    await _storage.appendGrowArchive(archiveJson);
+    await _storage.saveGardenList(list);
+    final wasActive = state?.gardenInstanceId == gardenInstanceId;
+    if (wasActive) {
+      if (list.isEmpty) {
+        state = null;
+        await _storage.setActiveGardenInstanceId(null);
+      } else {
+        final next = list.first;
+        state = GrowSession.fromJson(next.toJson());
+        await _storage.setActiveGardenInstanceId(next.gardenInstanceId);
+      }
+    }
+    ref.read(localDataRevisionProvider.notifier).state++;
+    _router.refresh();
+    await _syncScheduledGrowNotifications();
   }
 }
 

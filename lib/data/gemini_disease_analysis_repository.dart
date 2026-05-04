@@ -4,18 +4,23 @@ import 'dart:typed_data';
 import '../core/services/gemini_generative_service.dart';
 import '../core/services/plant_rag_context_service.dart';
 import '../domain/pest_guide_catalog.dart';
+import 'ai_tool_ids.dart';
 import 'disease_analysis_repository.dart';
+import 'grow_storage.dart';
 
 /// Multimodal Gemini analysis for plant health, pests, or species ID.
 class GeminiDiseaseAnalysisRepository implements DiseaseAnalysisRepository {
   GeminiDiseaseAnalysisRepository({
     required GeminiGenerativeService gemini,
     required PlantRagContextService rag,
+    required GrowStorage storage,
   })  : _gemini = gemini,
-        _rag = rag;
+        _rag = rag,
+        _storage = storage;
 
   final GeminiGenerativeService _gemini;
   final PlantRagContextService _rag;
+  final GrowStorage _storage;
 
   static const _jsonKeys = '''
 Output only valid JSON (no markdown fences) with keys:
@@ -35,6 +40,8 @@ All string values must be plain text: no markdown asterisks, no # headings, no b
     ImageAnalysisIntent intent = ImageAnalysisIntent.plantHealthAndDisease,
   }) async {
     final rag = await _rag.buildVisionAssistBlock();
+    final mem = _storage.buildAiToolContextBlock(AiToolIds.diseaseVision);
+    final memBlock = mem.isNotEmpty ? 'PRIOR_TOOL_MEMORY:\n$mem\n\n' : '';
     final u = Uint8List.fromList(bytes);
     final mime = _mimeFromBytes(u);
 
@@ -43,7 +50,7 @@ All string values must be plain text: no markdown asterisks, no # headings, no b
           '''You are an agricultural vision assistant for GrowSphere.
 Analyze the photograph on its own merits. The user may be growing something completely different in the app — ignore app session.
 $_jsonKeys''',
-          '''REFERENCE_CATALOG (optional, do not assume the photo matches any crop listed):
+          '''$memBlockREFERENCE_CATALOG (optional, do not assume the photo matches any crop listed):
 $rag
 
 Task: From the image only — identify the plant or crop if reasonably possible, assess health, likely diseases or abiotic stress, signs of nutrient deficiency, and pest-related damage. Be conservative where the image is unclear.
@@ -55,7 +62,7 @@ Identify likely pests, life stages, and damage from the image alone. Never inven
 If uncertain, say so in summary and keep recommendations general (monitoring, sanitation, expert ID).
 ${PestGuideEntry.referenceBlockForAi()}
 $_jsonKeys''',
-          '''REFERENCE_CATALOG (optional pest notes for common crops — use only if consistent with visible evidence):
+          '''$memBlockREFERENCE_CATALOG (optional pest notes for common crops — use only if consistent with visible evidence):
 $rag
 
 Task: Map findings to one of the guide pests when justified; otherwise use a neutral label like "Unconfirmed pest damage".
@@ -66,7 +73,7 @@ JSON only:''',
           '''You are a botany-aware crop assistant.
 Identify species, cultivar group, or closest alternatives from the image. If the image is not a plant, say so clearly.
 $_jsonKeys''',
-          '''REFERENCE_CATALOG (optional common names — image wins over catalog):
+          '''$memBlockREFERENCE_CATALOG (optional common names — image wins over catalog):
 $rag
 
 Task: Species / common name identification, confidence, and brief cultivation or look-alike disclaimer.
@@ -80,7 +87,16 @@ JSON only:''',
       imageBytes: u,
       mimeType: mime,
     );
-    return _parseDiseaseJson(raw);
+    final report = _parseDiseaseJson(raw);
+    final pn = plantName?.trim() ?? '';
+    final userLine = 'Vision ${intent.name}${pn.isNotEmpty ? ' ($pn)' : ''}';
+    final replyLine = '${report.label}: ${report.advice}';
+    await _storage.recordAiToolExchange(
+      AiToolIds.diseaseVision,
+      userLine,
+      replyLine.length > 1200 ? '${replyLine.substring(0, 1200)}…' : replyLine,
+    );
+    return report;
   }
 
   static String _mimeFromBytes(Uint8List b) {

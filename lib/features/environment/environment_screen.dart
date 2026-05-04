@@ -158,6 +158,16 @@ class _EnvironmentScreenState extends ConsumerState<EnvironmentScreen> {
                           );
                         }
                         if (context.mounted) context.go('/garden');
+                      } on StateError catch (e) {
+                        if (e.message == 'DUPLICATE_ACTIVE_GROW' && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'This crop is already in your garden. Finish or cancel that grow from My Garden first.',
+                              ),
+                            ),
+                          );
+                        }
                       } finally {
                         if (mounted) setState(() => _busy = false);
                       }

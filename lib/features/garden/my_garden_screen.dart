@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/widgets/plant_catalog_image.dart';
 import '../../core/theme/grow_colors.dart';
+import '../../data/ai_tool_ids.dart';
 import '../../data/weather_repository.dart';
 import '../../domain/grow_enums.dart';
 import '../../domain/grow_session.dart';
@@ -80,6 +81,8 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
         final g = ref.read(geminiGenerativeServiceProvider);
         if (g != null) {
           try {
+            final storage = ref.read(growStorageProvider);
+            final mem = storage.buildAiToolContextBlock(AiToolIds.weatherFallback);
             final month = DateTime.now().month;
             final raw = await g.generateText(
               systemInstruction:
@@ -90,9 +93,16 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
                   'Do not invent storms, heat waves, or snow unless typical for that band in that month. '
                   'If you cannot estimate, output exactly {"error":"cannot_estimate"}. No markdown, no extra text.',
               userText:
-                  'Latitude ${pos.latitude} Longitude ${pos.longitude} Month $month. JSON only.',
+                  '${mem.isNotEmpty ? 'PRIOR_TOOL_MEMORY:\n$mem\n\n' : ''}Latitude ${pos.latitude} Longitude ${pos.longitude} Month $month. JSON only.',
             );
             w = WeatherRepository.tryParseAiEstimateJson(raw, pos.latitude, pos.longitude);
+            if (w != null) {
+              await storage.recordAiToolExchange(
+                AiToolIds.weatherFallback,
+                'Fallback wx lat=${pos.latitude} lon=${pos.longitude} m=$month',
+                raw.length > 800 ? '${raw.substring(0, 800)}…' : raw,
+              );
+            }
           } catch (_) {}
         }
       }
@@ -141,15 +151,24 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
       tip = _fallbackTip(plants, w);
     } else {
       try {
+        final storage = ref.read(growStorageProvider);
+        final mem = storage.buildAiToolContextBlock(AiToolIds.gardenCoachTip);
         tip = await g.generateText(
           systemInstruction:
               'You are a concise gardening coach. Use ONLY the numbers and condition words in the user message for weather — '
               'do not invent temperature, rainfall, or humidity. If weather is unknown, give generic season-appropriate advice without fake numbers. '
               'At most 3 short sentences. Plain text only.',
           userText:
-              'Plants in the user garden: $names. Weather today: $wx. Give one practical combined tip (watering / rain / humidity).',
+              '${mem.isNotEmpty ? 'PRIOR_TOOL_MEMORY:\n$mem\n\n' : ''}Plants in the user garden: $names. Weather today: $wx. Give one practical combined tip (watering / rain / humidity).',
         );
         if (tip.isEmpty) tip = _fallbackTip(plants, w);
+        if (tip.isNotEmpty) {
+          await storage.recordAiToolExchange(
+            AiToolIds.gardenCoachTip,
+            'Tip for $names | $wx',
+            tip.length > 900 ? '${tip.substring(0, 900)}…' : tip,
+          );
+        }
       } catch (_) {
         tip = _fallbackTip(plants, w);
       }
@@ -425,6 +444,50 @@ class _MyGardenScreenState extends ConsumerState<MyGardenScreen> {
                         '&crop=${Uri.encodeComponent(s.plantName)}',
                       );
                     },
+                    onMarkComplete: () async {
+                      final ok = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Mark grow finished?'),
+                          content: Text(
+                            'Archive ${s.plantName} and free this crop in Add crops. Tasks for this grow stop here.',
+                          ),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l.cancel)),
+                            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Mark done')),
+                          ],
+                        ),
+                      );
+                      if (ok == true && context.mounted) {
+                        await ref
+                            .read(sessionControllerProvider.notifier)
+                            .removeGardenGrow(s.gardenInstanceId, markCompleted: true);
+                      }
+                    },
+                    onCancelGrow: () async {
+                      final ok = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Cancel this grow?'),
+                          content: Text(
+                            'Remove ${s.plantName} from My Garden without a harvest record. You can add this crop again later.',
+                          ),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l.cancel)),
+                            FilledButton(
+                              style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text('Cancel grow'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (ok == true && context.mounted) {
+                        await ref
+                            .read(sessionControllerProvider.notifier)
+                            .removeGardenGrow(s.gardenInstanceId, markCompleted: false);
+                      }
+                    },
                   ),
                 );
               },
@@ -449,6 +512,8 @@ class _GardenPlantCard extends ConsumerWidget {
     required this.sunLabel,
     required this.onCalendar,
     required this.onWatered,
+    required this.onMarkComplete,
+    required this.onCancelGrow,
   });
 
   final GrowSession session;
@@ -458,11 +523,12 @@ class _GardenPlantCard extends ConsumerWidget {
   final String sunLabel;
   final VoidCallback onCalendar;
   final VoidCallback onWatered;
+  final Future<void> Function() onMarkComplete;
+  final Future<void> Function() onCancelGrow;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
     final asyncPlant = ref.watch(_gardenCardPlantProvider(session.plantId));
 
     return Card(
@@ -472,16 +538,17 @@ class _GardenPlantCard extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: asyncPlant.when(
-          data: (plant) => _cardBody(context, ref, l, cs, plant),
+          data: (plant) => _cardBody(context, ref, l, plant),
           loading: () => const SizedBox(height: 120, child: Center(child: CircularProgressIndicator())),
-          error: (_, __) => _cardBody(context, ref, l, cs, null),
+          error: (_, __) => _cardBody(context, ref, l, null),
         ),
       ),
     );
   }
 
-  Widget _cardBody(BuildContext context, WidgetRef ref, AppLocalizations l, ColorScheme cs, Plant? plant) {
+  Widget _cardBody(BuildContext context, WidgetRef ref, AppLocalizations l, Plant? plant) {
     ref.watch(localDataRevisionProvider);
+    final cs = Theme.of(context).colorScheme;
     final valveOn = ref.read(growStorageProvider).sprinklerOnFor(session.gardenInstanceId);
     final loc = MaterialLocalizations.of(context);
     final startLabel = loc.formatFullDate(session.effectiveFarmingStart);
@@ -611,6 +678,27 @@ class _GardenPlantCard extends ConsumerWidget {
                 side: BorderSide(color: cs.outline),
               ),
               child: Icon(Icons.calendar_today_outlined, color: cs.onSurface, size: 20),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => onMarkComplete(),
+                icon: const Icon(Icons.check_circle_outline, size: 18),
+                label: const Text('Mark done'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => onCancelGrow(),
+                style: OutlinedButton.styleFrom(foregroundColor: cs.error),
+                icon: const Icon(Icons.cancel_outlined, size: 18),
+                label: const Text('Cancel'),
+              ),
             ),
           ],
         ),

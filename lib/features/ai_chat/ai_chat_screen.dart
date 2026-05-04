@@ -1,7 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:growspehere_v1/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../core/widgets/ai_progress_dialog.dart';
 import '../../data/ai_chat_repository.dart';
@@ -15,10 +21,24 @@ class AiChatScreen extends ConsumerStatefulWidget {
   ConsumerState<AiChatScreen> createState() => _AiChatScreenState();
 }
 
+class _ChatLine {
+  _ChatLine({required this.user, required this.text, this.imageRelPath});
+
+  final bool user;
+  final String text;
+  final String? imageRelPath;
+}
+
 class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   final _c = TextEditingController();
   final _scroll = ScrollController();
-  final _msgs = <(bool user, String text)>[];
+  final _msgs = <_ChatLine>[];
+  final _speech = stt.SpeechToText();
+  String? _threadId;
+  bool _speechAvailable = false;
+  bool _speechListening = false;
+  XFile? _pendingImage;
+  bool _loadingThread = true;
 
   static const _popular = <String>[
     'How do I grow tomatoes?',
@@ -30,39 +50,196 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureThread());
+    _speech.initialize(
+      onStatus: (s) {
+        if (!mounted) return;
+        if (s == 'done' || s == 'notListening') {
+          setState(() => _speechListening = false);
+        }
+      },
+      onError: (_) {
+        if (mounted) setState(() => _speechListening = false);
+      },
+    ).then((ok) {
+      if (mounted) setState(() => _speechAvailable = ok);
+    });
+  }
+
+  @override
   void dispose() {
+    if (_speech.isListening) {
+      _speech.stop();
+    }
     _c.dispose();
     _scroll.dispose();
     super.dispose();
   }
 
+  Future<void> _ensureThread() async {
+    final storage = ref.read(growStorageProvider);
+    var id = storage.activeAiChatThreadId;
+    final threads = storage.loadAiChatThreads();
+    if (id == null || !threads.any((e) => e['id'] == id)) {
+      id = await storage.createAiChatThread();
+    }
+    _threadId = id;
+    _loadMsgsFromStorage();
+    if (mounted) setState(() => _loadingThread = false);
+  }
+
+  void _loadMsgsFromStorage() {
+    final storage = ref.read(growStorageProvider);
+    final tid = _threadId;
+    if (tid == null) return;
+    final threads = storage.loadAiChatThreads();
+    Map<String, dynamic>? t;
+    for (final e in threads) {
+      if (e['id'] == tid) {
+        t = e;
+        break;
+      }
+    }
+    _msgs.clear();
+    if (t == null) return;
+    for (final m in (t['msgs'] as List<dynamic>? ?? [])) {
+      final map = Map<String, dynamic>.from(m as Map);
+      _msgs.add(
+        _ChatLine(
+          user: map['u'] == true,
+          text: map['t'] as String? ?? '',
+          imageRelPath: map['img'] as String?,
+        ),
+      );
+    }
+  }
+
+  Future<String?> _persistChatImage(XFile file, String threadId) async {
+    final root = await getApplicationDocumentsDirectory();
+    final dir = Directory(p.join(root.path, 'ai_chat_media', threadId));
+    await dir.create(recursive: true);
+    final ext = p.extension(file.path).isNotEmpty ? p.extension(file.path) : '.jpg';
+    final name = 'img_${DateTime.now().microsecondsSinceEpoch}$ext';
+    final outPath = p.join(dir.path, name);
+    await File(file.path).copy(outPath);
+    return p.join('ai_chat_media', threadId, name);
+  }
+
+  Future<File?> _imageFile(String? rel) async {
+    if (rel == null || rel.isEmpty) return null;
+    final root = await getApplicationDocumentsDirectory();
+    final path = p.join(root.path, rel);
+    final f = File(path);
+    if (await f.exists()) return f;
+    return null;
+  }
+
+  Future<void> _newChat() async {
+    final storage = ref.read(growStorageProvider);
+    await storage.createAiChatThread();
+    _msgs.clear();
+    await _ensureThread();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final img = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1600, imageQuality: 85);
+    if (img != null && mounted) setState(() => _pendingImage = img);
+  }
+
+  Future<void> _toggleMic() async {
+    if (_speechListening) {
+      await _speech.stop();
+      if (mounted) setState(() => _speechListening = false);
+      return;
+    }
+    if (!_speechAvailable) {
+      final ok = await _speech.initialize();
+      if (!mounted) return;
+      setState(() => _speechAvailable = ok);
+      if (!ok) return;
+    }
+    setState(() => _speechListening = true);
+    await _speech.listen(
+      listenMode: stt.ListenMode.dictation,
+      onResult: (r) {
+        if (!mounted) return;
+        _c.text = r.recognizedWords;
+        if (r.finalResult) {
+          setState(() => _speechListening = false);
+          _speech.stop();
+        }
+      },
+    );
+  }
+
   Future<void> _send(String text) async {
     final t = text.trim();
-    if (t.isEmpty) return;
-    final session = ref.read(sessionControllerProvider);
-    setState(() => _msgs.add((true, t)));
+    final img = _pendingImage;
+    if (t.isEmpty && img == null) return;
+    final tid = _threadId;
+    if (tid == null) return;
+
+    final storage = ref.read(growStorageProvider);
+    String? relPath;
+    if (img != null) {
+      relPath = await _persistChatImage(img, tid);
+    }
+    final userVisible = t.isEmpty && img != null ? '(Image)' : t;
+    setState(() {
+      _msgs.add(_ChatLine(user: true, text: userVisible, imageRelPath: relPath));
+      _pendingImage = null;
+    });
     _c.clear();
+    await storage.appendAiChatMessage(threadId: tid, isUser: true, text: userVisible, imageRelativePath: relPath);
+
+    final session = ref.read(sessionControllerProvider);
     final ctx = session == null ? null : 'Growing ${session.plantName}';
     final prior = <AiChatPriorTurn>[
-      for (var i = 0; i < _msgs.length - 1; i++) (isUser: _msgs[i].$1, text: _msgs[i].$2),
+      for (var i = 0; i < _msgs.length - 1; i++)
+        (isUser: _msgs[i].user, text: _msgs[i].text),
     ];
+
+    List<int>? imageBytes;
+    String? imageMime;
+    if (relPath != null) {
+      final root = await getApplicationDocumentsDirectory();
+      final f = File(p.join(root.path, relPath));
+      if (await f.exists()) {
+        imageBytes = await f.readAsBytes();
+        final lower = relPath.toLowerCase();
+        imageMime = lower.endsWith('.png')
+            ? 'image/png'
+            : lower.endsWith('.webp')
+                ? 'image/webp'
+                : 'image/jpeg';
+      }
+    }
+
     try {
       final reply = await runWithAiProgress(
         context,
         title: 'Grow assistant',
         messages: kAiStatusChatReply,
         task: ref.read(aiChatRepositoryProvider).sendMessage(
-              t,
+              t.isEmpty ? 'Describe this crop image and suggest next care steps.' : t,
               plantContext: ctx,
               priorTurns: prior.isEmpty ? null : prior,
+              imageBytes: imageBytes,
+              imageMimeType: imageMime,
             ),
       );
       if (!mounted) return;
-      setState(() => _msgs.add((false, reply)));
+      setState(() => _msgs.add(_ChatLine(user: false, text: reply)));
+      await storage.appendAiChatMessage(threadId: tid, isUser: false, text: reply);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _msgs.add((false, 'Sorry, something went wrong: $e')));
+      setState(() => _msgs.add(_ChatLine(user: false, text: 'Sorry, something went wrong: $e')));
     }
+    ref.read(localDataRevisionProvider.notifier).state++;
     await Future<void>.delayed(Duration.zero);
     if (_scroll.hasClients) {
       await _scroll.animateTo(
@@ -79,20 +256,31 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     final cs = Theme.of(context).colorScheme;
     final bottom = MediaQuery.paddingOf(context).bottom;
 
+    if (_loadingThread) {
+      return GrowToolShell(
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return GrowToolShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
             child: Row(
               children: [
+                IconButton(
+                  tooltip: 'New chat',
+                  onPressed: _newChat,
+                  icon: const Icon(Icons.add_comment_outlined),
+                ),
                 CircleAvatar(
                   radius: 22,
                   backgroundColor: cs.primary.withValues(alpha: 0.2),
                   child: Icon(Icons.spa_rounded, color: cs.primary, size: 24),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,7 +290,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                         style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 17, color: cs.onSurface),
                       ),
                       Text(
-                        'Crop-aware answers · grounded in your catalog',
+                        'Saved chats · follow-ups · photos · voice',
                         style: GoogleFonts.inter(fontSize: 12, color: cs.onSurfaceVariant, height: 1.25),
                       ),
                     ],
@@ -123,7 +311,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Divider(height: 1, color: cs.outline.withValues(alpha: 0.25)),
           Expanded(
             child: _msgs.isEmpty
@@ -187,7 +375,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                     itemCount: _msgs.length,
                     itemBuilder: (_, i) {
                       final m = _msgs[i];
-                      final user = m.$1;
+                      final user = m.user;
                       final maxW = MediaQuery.sizeOf(context).width * 0.86;
                       return Align(
                         alignment: user ? Alignment.centerRight : Alignment.centerLeft,
@@ -227,13 +415,38 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                                     ),
                                     child: Padding(
                                       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                                      child: SelectableText(
-                                        m.$2,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 14.5,
-                                          height: 1.45,
-                                          color: user ? cs.onSurface : cs.onSurface,
-                                        ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          if (m.imageRelPath != null)
+                                            FutureBuilder<File?>(
+                                              future: _imageFile(m.imageRelPath),
+                                              builder: (_, snap) {
+                                                final f = snap.data;
+                                                if (f == null) {
+                                                  return Icon(Icons.image_not_supported, color: cs.onSurfaceVariant);
+                                                }
+                                                return ClipRRect(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  child: Image.file(
+                                                    f,
+                                                    width: 220,
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          if (m.imageRelPath != null && m.text.isNotEmpty)
+                                            const SizedBox(height: 8),
+                                          SelectableText(
+                                            m.text,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14.5,
+                                              height: 1.45,
+                                              color: cs.onSurface,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -254,8 +467,30 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                     },
                   ),
           ),
+          if (_pendingImage != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.attach_file, size: 18),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _pendingImage!.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(fontSize: 12, color: cs.onSurfaceVariant),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () => setState(() => _pendingImage = null),
+                  ),
+                ],
+              ),
+            ),
           Container(
-            padding: EdgeInsets.fromLTRB(12, 8, 12, 10 + bottom),
+            padding: EdgeInsets.fromLTRB(8, 8, 8, 10 + bottom),
             decoration: BoxDecoration(
               color: cs.surface,
               border: Border(top: BorderSide(color: cs.outline.withValues(alpha: 0.28))),
@@ -263,6 +498,19 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
+                IconButton(
+                  tooltip: 'Attach image',
+                  onPressed: _pickImage,
+                  icon: Icon(Icons.image_outlined, color: cs.primary),
+                ),
+                IconButton(
+                  tooltip: _speechListening ? 'Stop dictation' : 'Voice input',
+                  onPressed: _toggleMic,
+                  icon: Icon(
+                    _speechListening ? Icons.stop_circle_outlined : Icons.mic_none_rounded,
+                    color: _speechListening ? cs.error : cs.onSurfaceVariant,
+                  ),
+                ),
                 Expanded(
                   child: TextField(
                     controller: _c,
@@ -291,7 +539,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                     onSubmitted: (_) => _send(_c.text),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 FilledButton(
                   onPressed: () => _send(_c.text),
                   style: FilledButton.styleFrom(

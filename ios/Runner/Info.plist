@@ -51,5 +51,9 @@
 	<string>Select a plant photo for the disease check demo.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Location is used to load nearby weather from Open-Meteo.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The microphone is used for voice input in the Grow assistant chat.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Speech recognition turns your voice into text in the Grow assistant chat.</string>
 </dict>
 </plist>

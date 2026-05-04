@@ -45,6 +45,29 @@ class GeminiGenerativeService {
     return res.text?.trim() ?? '';
   }
 
+  /// Multi-turn chat; latest user turn may include an image.
+  Future<String> generateChatReplyMultimodal({
+    required String systemInstruction,
+    required List<Content> history,
+    required String message,
+    Uint8List? imageBytes,
+    String? imageMimeType,
+  }) async {
+    final model = _textModel(systemInstruction);
+    final chat = model.startChat(history: history);
+    final Content userContent;
+    if (imageBytes != null && imageBytes.isNotEmpty && imageMimeType != null && imageMimeType.isNotEmpty) {
+      userContent = Content.multi([
+        TextPart(message),
+        DataPart(imageMimeType, imageBytes),
+      ]);
+    } else {
+      userContent = Content.text(message);
+    }
+    final res = await chat.sendMessage(userContent);
+    return res.text?.trim() ?? '';
+  }
+
   /// Multimodal: one image + text prompt. [mimeType] e.g. `image/jpeg` or `image/png`.
   Future<String> generateWithImage({
     required String systemInstruction,

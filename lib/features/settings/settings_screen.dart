@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/grow_colors.dart';
-import '../../data/grow_storage.dart';
+import '../../data/ai_tool_ids.dart';
 import '../../providers/providers.dart';
 import '../shell/grow_layout.dart';
 
@@ -109,6 +109,57 @@ class SettingsScreen extends ConsumerWidget {
                 _kvRow(l.versionLabel, '1.0.0'),
                 _kvRow(l.lastUpdatedLabel, 'Today'),
                 _kvRow(l.storageUsedLabel, '2.4 MB'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _SectionCard(
+            icon: Icons.psychology_outlined,
+            title: 'AI tool memory',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Short rolling context is kept per feature so follow-up prompts stay coherent. '
+                  'Chats are stored separately in the assistant screen.',
+                  style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 8),
+                for (final row in AiToolIds.settingsRows)
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(row.$2, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 22),
+                      tooltip: 'Clear memory',
+                      onPressed: () async {
+                        await storage.clearAiToolContext(row.$1);
+                        ref.read(localDataRevisionProvider.notifier).state++;
+                        ref.read(uiTickProvider.notifier).state++;
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Cleared: ${row.$2}')),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    await storage.clearAllAiToolContexts();
+                    ref.read(localDataRevisionProvider.notifier).state++;
+                    ref.read(uiTickProvider.notifier).state++;
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Cleared all AI tool memory')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.delete_sweep_outlined),
+                  label: const Text('Clear all tool memory'),
+                ),
               ],
             ),
           ),

@@ -4,12 +4,19 @@ import 'package:geolocator/geolocator.dart';
 
 import '../core/services/gemini_generative_service.dart';
 import '../domain/plant.dart';
+import 'ai_tool_ids.dart';
+import 'grow_storage.dart';
 
 /// Uses coarse GPS + Gemini (when configured) to pick catalog crops suited to the area.
 class LocationCropSuggestionsRepository {
-  LocationCropSuggestionsRepository({GeminiGenerativeService? gemini}) : _gemini = gemini;
+  LocationCropSuggestionsRepository({
+    GeminiGenerativeService? gemini,
+    GrowStorage? storage,
+  })  : _gemini = gemini,
+        _storage = storage;
 
   final GeminiGenerativeService? _gemini;
+  final GrowStorage? _storage;
 
   Future<Position?> _tryPosition() async {
     var perm = await Geolocator.checkPermission();
@@ -38,8 +45,9 @@ class LocationCropSuggestionsRepository {
     if (_gemini != null) {
       try {
         final idsCsv = allowed.join(',');
+        final mem = _storage?.buildAiToolContextBlock(AiToolIds.locationCropSuggest) ?? '';
         final user = '''
-Approximate latitude: ${lat ?? 'unknown'}, longitude: ${lng ?? 'unknown'}.
+${mem.isNotEmpty ? 'PRIOR_TOOL_MEMORY:\n$mem\n\n' : ''}Approximate latitude: ${lat ?? 'unknown'}, longitude: ${lng ?? 'unknown'}.
 Choose 6–12 crop ids well suited to this climate and typical Indian small-farm / home-garden conditions.
 Use ONLY ids from this comma-separated list (no invented ids): $idsCsv
 Output ONLY valid JSON: {"ids":["id1","id2",...]}
@@ -49,6 +57,13 @@ Output ONLY valid JSON: {"ids":["id1","id2",...]}
           userText: user,
         );
         final parsed = _parseIds(raw, allowed);
+        if (parsed.isNotEmpty) {
+          await _storage?.recordAiToolExchange(
+            AiToolIds.locationCropSuggest,
+            'Suggest ids lat=$lat lng=$lng',
+            raw.length > 1200 ? '${raw.substring(0, 1200)}…' : raw,
+          );
+        }
         if (parsed.isNotEmpty) return parsed;
       } catch (_) {}
     }

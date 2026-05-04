@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 /// Prior chat turns in order: user → model → user → model → … (excludes the latest user message passed as [userText]).
 typedef AiChatPriorTurn = ({bool isUser, String text});
 
@@ -7,6 +9,8 @@ abstract class AiChatRepository {
     String userText, {
     String? plantContext,
     List<AiChatPriorTurn>? priorTurns,
+    Uint8List? imageBytes,
+    String? imageMimeType,
   });
 }
 
@@ -16,6 +20,8 @@ class LocalKeywordAiRepository implements AiChatRepository {
     String userText, {
     String? plantContext,
     List<AiChatPriorTurn>? priorTurns,
+    Uint8List? imageBytes,
+    String? imageMimeType,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 400));
     final t = userText.toLowerCase();
@@ -28,6 +34,9 @@ class LocalKeywordAiRepository implements AiChatRepository {
     }
     if (t.contains('pest')) {
       return 'Identify the pest stage first; combine physical removal, rotation, and approved sprays only if needed.';
+    }
+    if (imageBytes != null && imageBytes.isNotEmpty) {
+      return 'Image received. This offline assistant cannot analyze photos — add a Gemini API key for vision, or describe what you see in text.';
     }
     return 'Thanks for your question. This offline assistant gives general guidance only. '
         'For field-specific advice, consult your local extension officer.';
