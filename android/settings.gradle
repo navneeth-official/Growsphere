@@ -24,8 +24,8 @@ pluginManagement {
 plugins {
     id "dev.flutter.flutter-plugin-loader" version "1.0.0"
     id "com.android.application" version "8.9.1" apply false
-    // Kotlin 2.1.x can break some Flutter plugins' Android Kotlin sources; 2.0.21 tracks Flutter templates more closely.
-    id "org.jetbrains.kotlin.android" version "2.0.21" apply false
+    // Flutter recommends Kotlin 2.1.0+; speech_to_text 7.3.x uses Android embedding v2 (no Registrar).
+    id "org.jetbrains.kotlin.android" version "2.1.0" apply false
 }
 
 include ":app"
